@@ -826,6 +826,9 @@ export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 2);
 }
 
+const MIN_IMAGE_TOKENS = 1500;
+const MAX_IMAGE_TOKENS = 6000;
+
 /**
  * Estimate message array tokens
  */
@@ -852,9 +855,12 @@ export function estimateMessagesTokens(
       }
       const img = extractImageData(part);
       if (img) {
-        // Rough estimate based on base64 size to avoid undercount
+        // Bound image estimates to reduce base64 size overcounting.
         const approxBase64Tokens = Math.ceil(img.data.length / 3);
-        total += Math.max(1500, approxBase64Tokens);
+        total += Math.min(
+          MAX_IMAGE_TOKENS,
+          Math.max(MIN_IMAGE_TOKENS, approxBase64Tokens)
+        );
         continue;
       }
       const toolCall = getToolCallInfo(part);

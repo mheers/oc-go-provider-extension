@@ -57,6 +57,8 @@ const BASE_URL = "https://opencode.ai/zen/go/v1";
 const MAX_TOOL_RESULT_CHARS = 20000;
 const MAX_TOOLS_PER_REQUEST = 128;
 const DEFAULT_MAX_TOKENS = 65536;
+const MAX_OCR_TOKENS = 2000;
+const OCR_TRUNCATION_SUFFIX = "\n\n...[truncated image analysis]";
 
 /**
  * VS Code Chat provider backed by OpenCode Go API.
@@ -281,6 +283,22 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     }
   }
 
+  private truncateTextToTokens(
+    text: string,
+    maxTokens: number,
+    suffix: string
+  ): string {
+    if (maxTokens <= 0) {
+      return text;
+    }
+    const tokenCount = estimateTokens(text);
+    if (tokenCount <= maxTokens) {
+      return text;
+    }
+    const maxChars = Math.max(1, maxTokens * 2 - suffix.length);
+    return `${text.slice(0, maxChars)}${suffix}`;
+  }
+
   /**
    * Pre-process messages to handle images
    * Converts images to text descriptions using GLM-OCR MCP
@@ -337,7 +355,13 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
           imageDataUrl,
           analysisPrompt
         );
-        thisMessageDescriptions.push(description);
+        thisMessageDescriptions.push(
+          this.truncateTextToTokens(
+            description,
+            MAX_OCR_TOKENS,
+            OCR_TRUNCATION_SUFFIX
+          )
+        );
       }
 
       // Replace image with text description for non-Vision model

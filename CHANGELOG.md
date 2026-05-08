@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-05-08
+
+### Fixed
+
+- Cap image token estimation to avoid base64 size overcounting
+- Truncate OCR image analysis text to prevent oversized prompts
+
 ## [0.6.0] - 2026-05-04
 
 ### Added
