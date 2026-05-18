@@ -35,7 +35,9 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
-  "enabledApiProposals": ["chatProvider"],
+  "enabledApiProposals": [
+    "chatProvider"
+  ],
   "contributes": {
     "languageModelChatProviders": [
       {
@@ -70,7 +72,12 @@
         "opencodego.visionProxyModel": {
           "type": "string",
           "default": "mimo-v2-omni",
-          "enum": ["mimo-v2-omni", "mimo-v2.5", "kimi-k2.6", "qwen3.6-plus"],
+          "enum": [
+            "mimo-v2-omni",
+            "mimo-v2.5",
+            "kimi-k2.6",
+            "qwen3.6-plus"
+          ],
           "description": "Vision model used as OCR proxy for non-vision models"
         }
       }

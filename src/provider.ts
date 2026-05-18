@@ -371,9 +371,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
           img.mimeType +
           "|" +
           Buffer.from(
-            img.data.length <= 2048
-              ? img.data
-              : img.data.subarray(0, 1024)
+            img.data.length <= 2048 ? img.data : img.data.subarray(0, 1024)
           ).toString("base64") +
           "|" +
           img.data.length;
@@ -412,9 +410,10 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       }
 
       // Rebuild message with OCR text instead of images
-      const role = msg.role === vscode.LanguageModelChatMessageRole.Assistant
-        ? vscode.LanguageModelChatMessageRole.Assistant
-        : vscode.LanguageModelChatMessageRole.User;
+      const role =
+        msg.role === vscode.LanguageModelChatMessageRole.Assistant
+          ? vscode.LanguageModelChatMessageRole.Assistant
+          : vscode.LanguageModelChatMessageRole.User;
 
       const newContent: vscode.LanguageModelTextPart[] = [];
       for (const textPart of textParts) {
@@ -464,7 +463,12 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     this._reasoningContentBuffer = "";
     this._emittedTextToolCallKeys.clear();
     this._emittedTextToolCallIds.clear();
-    this._usageMetrics = { prompt_tokens: 0, completion_tokens: 0, cache_hit_tokens: 0, cache_miss_tokens: 0 };
+    this._usageMetrics = {
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      cache_hit_tokens: 0,
+      cache_miss_tokens: 0,
+    };
     this._usageReported = false;
     const abortController = new AbortController();
     const cancellationSubscription = token.onCancellationRequested(() => {
@@ -496,14 +500,19 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       }
 
       // Resolve thinking level once
-      const { baseId: resolvedId, level: thinkingLevel } = parseVariantModelId(model.id);
+      const { baseId: resolvedId, level: thinkingLevel } = parseVariantModelId(
+        model.id
+      );
       const effectiveModelId = resolvedId;
 
       const hasImages = this.hasImageInput(messages);
       let processedMessages = messages;
 
       if (hasImages && !this.modelSupportsVision(effectiveModelId)) {
-        debugLog("OCR-ROUTE", { model: effectiveModelId, reason: "non-vision" });
+        debugLog("OCR-ROUTE", {
+          model: effectiveModelId,
+          reason: "non-vision",
+        });
         const result = await this.processImagesForNonVisionModel(
           messages,
           effectiveModelId,
@@ -722,7 +731,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     const thinkingParams = getThinkingParams(effectiveModelId, thinkingLevel);
     if (thinkingParams) {
       Object.assign(requestBody, thinkingParams);
-      debugLog("THINKING-INJECT", { model: effectiveModelId, level: thinkingLevel, params: thinkingParams });
+      debugLog("THINKING-INJECT", {
+        model: effectiveModelId,
+        level: thinkingLevel,
+        params: thinkingParams,
+      });
     }
 
     const response = await fetch(`${BASE_URL}/chat/completions`, {
@@ -753,11 +766,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       throw new Error("No response body from OpenCode Go API");
     }
 
-    await this.processStreamingResponse(
-      response.body,
-      trackingProgress,
-      token
-    );
+    await this.processStreamingResponse(response.body, trackingProgress, token);
   }
 
   /**
@@ -814,7 +823,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     const thinkingParams = getThinkingParams(effectiveModelId, thinkingLevel);
     if (thinkingParams) {
       Object.assign(requestBody, thinkingParams);
-      debugLog("THINKING-INJECT-ANTHROPIC", { model: effectiveModelId, level: thinkingLevel, params: thinkingParams });
+      debugLog("THINKING-INJECT-ANTHROPIC", {
+        model: effectiveModelId,
+        level: thinkingLevel,
+        params: thinkingParams,
+      });
     }
 
     console.log("[OpenCode Go Model Provider] Anthropic request body", {
@@ -1112,14 +1125,21 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
               }
               // Cache tracking
               if (parsed.usage.prompt_cache_hit_tokens !== undefined) {
-                this._usageMetrics.cache_hit_tokens = parsed.usage.prompt_cache_hit_tokens;
+                this._usageMetrics.cache_hit_tokens =
+                  parsed.usage.prompt_cache_hit_tokens;
               }
               if (parsed.usage.prompt_cache_miss_tokens !== undefined) {
-                this._usageMetrics.cache_miss_tokens = parsed.usage.prompt_cache_miss_tokens;
+                this._usageMetrics.cache_miss_tokens =
+                  parsed.usage.prompt_cache_miss_tokens;
               }
               // OpenAI-style cache stats
-              const cachedTokens = (parsed.usage as Record<string, unknown>).prompt_tokens_details;
-              if (cachedTokens && typeof cachedTokens === "object" && cachedTokens !== null) {
+              const cachedTokens = (parsed.usage as Record<string, unknown>)
+                .prompt_tokens_details;
+              if (
+                cachedTokens &&
+                typeof cachedTokens === "object" &&
+                cachedTokens !== null
+              ) {
                 const ct = cachedTokens as { cached_tokens?: number };
                 if (ct.cached_tokens !== undefined) {
                   this._usageMetrics.cache_hit_tokens = ct.cached_tokens;
@@ -1160,7 +1180,12 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       this._reasoningContentBuffer = "";
       this._emittedTextToolCallKeys.clear();
       this._emittedTextToolCallIds.clear();
-      this._usageMetrics = { prompt_tokens: 0, completion_tokens: 0, cache_hit_tokens: 0, cache_miss_tokens: 0 };
+      this._usageMetrics = {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        cache_hit_tokens: 0,
+        cache_miss_tokens: 0,
+      };
       this._usageReported = false;
     }
   }

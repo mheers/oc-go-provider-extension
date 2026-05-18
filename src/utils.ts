@@ -11,7 +11,9 @@ import type {
 } from "./types";
 
 // Check if LanguageModelThinkingPart is available (VS Code 1.120+)
-const hasThinkingPart = typeof (vscode as unknown as Record<string, unknown>).LanguageModelThinkingPart === "function";
+const hasThinkingPart =
+  typeof (vscode as unknown as Record<string, unknown>)
+    .LanguageModelThinkingPart === "function";
 
 /**
  * Legacy part shape used by mocks or older API shapes
@@ -351,7 +353,12 @@ export function convertMessages(
     for (const part of msg.content) {
       if (typeof part === "object" && part !== null) {
         // VS Code 1.120+ ThinkingPart
-        if (hasThinkingPart && "value" in part && (part as { constructor?: { name?: string } }).constructor?.name === "LanguageModelThinkingPart") {
+        if (
+          hasThinkingPart &&
+          "value" in part &&
+          (part as { constructor?: { name?: string } }).constructor?.name ===
+            "LanguageModelThinkingPart"
+        ) {
           reasoningContent = String((part as { value: string }).value);
           continue;
         }
@@ -363,7 +370,12 @@ export function convertMessages(
         ) {
           try {
             const json: unknown = JSON.parse(new TextDecoder().decode(p.data));
-            if (typeof json === "object" && json !== null && "content" in json && typeof (json as { content: unknown }).content === "string") {
+            if (
+              typeof json === "object" &&
+              json !== null &&
+              "content" in json &&
+              typeof (json as { content: unknown }).content === "string"
+            ) {
               reasoningContent = (json as { content: string }).content;
             }
           } catch {
