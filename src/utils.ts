@@ -10,6 +10,9 @@ import type {
   AnthropicTool,
 } from "./types";
 
+// Check if LanguageModelThinkingPart is available (VS Code 1.120+)
+const hasThinkingPart = typeof (vscode as unknown as Record<string, unknown>).LanguageModelThinkingPart === "function";
+
 /**
  * Legacy part shape used by mocks or older API shapes
  */
@@ -343,19 +346,25 @@ export function convertMessages(
       }
     }
 
-    // Extract reasoning content from custom data parts (preserved from previous turns)
+    // Extract reasoning from LanguageModelThinkingPart (VS Code 1.120+) or DataPart
     let reasoningContent = "";
     for (const part of msg.content) {
       if (typeof part === "object" && part !== null) {
+        // VS Code 1.120+ ThinkingPart
+        if (hasThinkingPart && "value" in part && (part as { constructor?: { name?: string } }).constructor?.name === "LanguageModelThinkingPart") {
+          reasoningContent = String((part as { value: string }).value);
+          continue;
+        }
+        // Fallback: custom data part with reasoning mime type
         const p = part as { mimeType?: string; data?: Uint8Array };
         if (
           p.mimeType === "application/vnd.opencode-go.reasoning+json" &&
           p.data instanceof Uint8Array
         ) {
           try {
-            const json = JSON.parse(new TextDecoder().decode(p.data));
-            if (typeof json.content === "string") {
-              reasoningContent = json.content;
+            const json: unknown = JSON.parse(new TextDecoder().decode(p.data));
+            if (typeof json === "object" && json !== null && "content" in json && typeof (json as { content: unknown }).content === "string") {
+              reasoningContent = (json as { content: string }).content;
             }
           } catch {
             // Ignore malformed reasoning data parts
@@ -827,7 +836,7 @@ export function estimateTokens(text: string): number {
 }
 
 const MIN_IMAGE_TOKENS = 1500;
-const MAX_IMAGE_TOKENS = 6000;
+const MAX_IMAGE_TOKENS = 1500;
 
 /**
  * Estimate message array tokens

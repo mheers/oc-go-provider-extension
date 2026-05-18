@@ -42,6 +42,10 @@ export class LanguageModelDataPart {
   }
 }
 
+export class LanguageModelThinkingPart {
+  constructor(public readonly value: string) {}
+}
+
 export class LanguageModelPromptTsxPart {
   constructor(public readonly value: Json) {}
 }
@@ -144,6 +148,10 @@ export interface LanguageModelChatInformation {
     toolCalling?: boolean | number;
     imageInput?: boolean;
   };
+  isUserSelectable?: boolean;
+  configurationSchema?: {
+    readonly properties?: Record<string, unknown>;
+  };
 }
 
 export interface ProvideLanguageModelChatResponseOptions {
@@ -178,6 +186,20 @@ export type LanguageModelChatTool = LanguageModelTool;
 
 export interface Disposable {
   dispose(): void;
+}
+
+export interface StatusBarItem {
+  text: string;
+  tooltip: string | undefined;
+  command: string | undefined;
+  show(): void;
+  hide(): void;
+  dispose(): void;
+}
+
+export interface ExtensionContext {
+  secrets: SecretStorage;
+  subscriptions: Disposable[];
 }
 
 export type Event<T> = (listener: (e: T) => void) => Disposable;
@@ -273,10 +295,23 @@ export const commands = {
   registerCommand: jest.fn(),
 };
 
+export enum StatusBarAlignment {
+  Left = 1,
+  Right = 2,
+}
+
 export const window = {
   showInputBox: jest.fn(),
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),
+  createStatusBarItem: jest.fn().mockReturnValue({
+    show: jest.fn(),
+    hide: jest.fn(),
+    dispose: jest.fn(),
+    text: "",
+    tooltip: "",
+    command: undefined,
+  }),
 };
 
 export const workspace = {
@@ -284,6 +319,12 @@ export const workspace = {
     get: <T>(_section: string, defaultValue: T): T => defaultValue,
   })),
 };
+
+export enum ConfigurationTarget {
+  Global = 1,
+  Workspace = 2,
+  WorkspaceFolder = 3,
+}
 
 export const extensions = {
   getExtension: jest.fn(),

@@ -111,6 +111,9 @@ export interface OcGoStreamResponse {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    prompt_cache_hit_tokens?: number;
+    prompt_cache_miss_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
   };
 }
 
@@ -133,6 +136,8 @@ export interface OcGoModelInfo {
   apiFormat: OcGoApiFormat;
   /** If set, this exact temperature value is sent for every request (some models only accept a single value). */
   fixedTemperature?: number;
+  /** Thinking/reasoning mode for this model */
+  thinkingMode?: "always" | "switchable" | "none";
 }
 
 /**
@@ -150,6 +155,9 @@ export interface OcGoRequestBody {
   presence_penalty?: number;
   tools?: OcGoTool[];
   tool_choice?: "auto" | "none" | { type: string; function: { name: string } };
+  reasoning_effort?: string;
+  thinking?: { type: "enabled" | "disabled" };
+  chat_template_kwargs?: { enable_thinking: boolean };
 }
 
 // ============================================================================
@@ -196,6 +204,7 @@ export interface AnthropicRequestBody {
   stop_sequences?: string[];
   tools?: AnthropicTool[];
   tool_choice?: "auto" | "any" | { type: "tool"; name: string };
+  thinking?: { type: "enabled"; budget_tokens: number } | { type: "disabled" };
 }
 
 /** Anthropic response */
@@ -288,6 +297,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "none",
   },
   {
     id: "glm-5.1",
@@ -298,6 +308,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "none",
   },
   {
     id: "kimi-k2.5",
@@ -309,6 +320,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsVision: true,
     apiFormat: "openai",
     fixedTemperature: 1,
+    thinkingMode: "always",
   },
   {
     id: "kimi-k2.6",
@@ -320,6 +332,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsVision: true,
     apiFormat: "openai",
     fixedTemperature: 1,
+    thinkingMode: "always",
   },
   {
     id: "mimo-v2-pro",
@@ -330,6 +343,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "mimo-v2-omni",
@@ -340,6 +354,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: true,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "mimo-v2.5-pro",
@@ -350,6 +365,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "mimo-v2.5",
@@ -360,6 +376,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: true,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "minimax-m2.5",
@@ -370,6 +387,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "anthropic",
+    thinkingMode: "none",
   },
   {
     id: "minimax-m2.7",
@@ -380,6 +398,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "anthropic",
+    thinkingMode: "none",
   },
   {
     id: "qwen3.5-plus",
@@ -390,6 +409,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: true,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "qwen3.6-plus",
@@ -400,6 +420,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: true,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "deepseek-v4-flash",
@@ -410,6 +431,7 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
   {
     id: "deepseek-v4-pro",
@@ -420,5 +442,9 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "switchable",
   },
 ];
+
+/** Default model used for OCR/vision proxy when non-vision models receive images */
+export const DEFAULT_VISION_PROXY_MODEL = "mimo-v2-omni";

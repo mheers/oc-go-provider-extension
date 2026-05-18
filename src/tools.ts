@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { OcGoMcpClient } from "./mcp";
+import { DEFAULT_VISION_PROXY_MODEL } from "./types";
 
 /**
  * Tool for analyzing images using OpenCode Go Vision model.
@@ -35,7 +36,7 @@ export class OcGoAnalyzeImageTool implements vscode.LanguageModelTool<{
 
   private readonly _mcpClient: OcGoMcpClient;
 
-  constructor(secrets: vscode.SecretStorage) {
+  constructor(secrets: vscode.SecretStorage, private readonly visionModelId: string = DEFAULT_VISION_PROXY_MODEL) {
     this._mcpClient = new OcGoMcpClient(secrets);
   }
 
@@ -49,7 +50,7 @@ export class OcGoAnalyzeImageTool implements vscode.LanguageModelTool<{
     const { image_data, prompt } = options.input;
 
     try {
-      const result = await this._mcpClient.analyzeImage(image_data, prompt);
+      const result = await this._mcpClient.analyzeImage(image_data, prompt, this.visionModelId);
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(result),
       ]);
@@ -83,9 +84,10 @@ export class OcGoAnalyzeImageTool implements vscode.LanguageModelTool<{
  * @returns Disposable for the tool registrations
  */
 export function registerOcGoTools(
-  secrets: vscode.SecretStorage
+  secrets: vscode.SecretStorage,
+  visionModelId?: string
 ): vscode.Disposable {
-  const analyzeImageTool = new OcGoAnalyzeImageTool(secrets);
+  const analyzeImageTool = new OcGoAnalyzeImageTool(secrets, visionModelId);
 
   return vscode.Disposable.from(
     vscode.lm.registerTool(OcGoAnalyzeImageTool.id, analyzeImageTool)
