@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-19
+
+### Added
+
+- Enhanced image analysis tool with vision model support and logging
+
+### Changed
+
+- Improved code formatting and readability in package.json, provider.ts, and utils.ts
+
 ## [0.6.1] - 2026-05-08
 
 ### Fixed
