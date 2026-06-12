@@ -4,7 +4,13 @@ export type ThinkingMode = "always" | "switchable" | "none";
 
 export interface ThinkingSchema {
   type: "object";
-  properties: Record<string, unknown>;
+  properties: Record<
+    string,
+    Record<string, any> & {
+      readonly enumItemLabels?: string[];
+      readonly group?: string;
+    }
+  >;
 }
 
 interface FamilyConfig {
@@ -71,6 +77,23 @@ const FAMILIES: Record<string, FamilyConfig> = {
     getParams: (level) => ({
       chat_template_kwargs: { enable_thinking: level === "on" },
     }),
+    suffix: "thinking",
+  },
+  // Anthropic-format (messages endpoint) thinking families
+  "qwen3.7": {
+    levels: ["on", "off"],
+    getParams: (level) =>
+      level === "on"
+        ? { thinking: { type: "enabled" as const, budget_tokens: 16000 } }
+        : { thinking: { type: "disabled" as const } },
+    suffix: "thinking",
+  },
+  "minimax-m3": {
+    levels: ["on", "off"],
+    getParams: (level) =>
+      level === "on"
+        ? { thinking: { type: "enabled" as const, budget_tokens: 16000 } }
+        : { thinking: { type: "disabled" as const } },
     suffix: "thinking",
   },
 };

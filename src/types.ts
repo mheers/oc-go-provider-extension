@@ -285,7 +285,7 @@ export type AnthropicSSEEvent =
  *   GLM-5, GLM-5.1, Kimi K2.5, Kimi K2.6, MiMo-V2-Pro, MiMo-V2-Omni
  *
  * Models using the Anthropic-compatible endpoint (messages):
- *   MiniMax M2.5, MiniMax M2.7
+ *   MiniMax M2.5, MiniMax M2.7, MiniMax M3, Qwen3.7 Plus, Qwen3.7 Max
  */
 export const OC_GO_MODELS: OcGoModelInfo[] = [
   {
@@ -442,6 +442,39 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     supportsTools: true,
     supportsVision: false,
     apiFormat: "openai",
+    thinkingMode: "switchable",
+  },
+  {
+    id: "minimax-m3",
+    name: "MiniMax M3",
+    displayName: "MiniMax M3",
+    contextWindow: 262144,
+    maxOutput: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    apiFormat: "anthropic",
+    thinkingMode: "switchable",
+  },
+  {
+    id: "qwen3.7-plus",
+    name: "Qwen3.7 Plus",
+    displayName: "Qwen3.7 Plus",
+    contextWindow: 1000000,
+    maxOutput: 65536,
+    supportsTools: true,
+    supportsVision: true,
+    apiFormat: "anthropic",
+    thinkingMode: "switchable",
+  },
+  {
+    id: "qwen3.7-max",
+    name: "Qwen3.7 Max",
+    displayName: "Qwen3.7 Max",
+    contextWindow: 262144,
+    maxOutput: 65536,
+    supportsTools: true,
+    supportsVision: true,
+    apiFormat: "anthropic",
     thinkingMode: "switchable",
   },
 ];

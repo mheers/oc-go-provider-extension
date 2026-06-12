@@ -437,9 +437,47 @@ describe("OC_GO_MODELS", () => {
     expect(model?.maxOutput).toBe(65536);
   });
 
-  it("should have OpenAI format for non-MiniMax models", () => {
+  it("should have MiniMax M3 model with Anthropic API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "minimax-m3");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("MiniMax M3");
+    expect(model?.apiFormat).toBe("anthropic");
+    expect(model?.thinkingMode).toBe("switchable");
+    expect(model?.contextWindow).toBe(262144);
+    expect(model?.maxOutput).toBe(131072);
+  });
+
+  it("should have Qwen3.7 Plus model with Anthropic API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "qwen3.7-plus");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Qwen3.7 Plus");
+    expect(model?.apiFormat).toBe("anthropic");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.thinkingMode).toBe("switchable");
+    expect(model?.contextWindow).toBe(1000000);
+    expect(model?.maxOutput).toBe(65536);
+  });
+
+  it("should have Qwen3.7 Max model with Anthropic API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "qwen3.7-max");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Qwen3.7 Max");
+    expect(model?.apiFormat).toBe("anthropic");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.thinkingMode).toBe("switchable");
+    expect(model?.contextWindow).toBe(262144);
+    expect(model?.maxOutput).toBe(65536);
+  });
+
+  it("should have correct API formats for each model", () => {
+    const anthropicModels = OC_GO_MODELS.filter(
+      (m) => m.id.startsWith("minimax-") || m.id.startsWith("qwen3.7-")
+    );
+    anthropicModels.forEach((model) => {
+      expect(model.apiFormat).toBe("anthropic");
+    });
     const openaiModels = OC_GO_MODELS.filter(
-      (m) => m.id !== "minimax-m2.5" && m.id !== "minimax-m2.7"
+      (m) => !m.id.startsWith("minimax-") && !m.id.startsWith("qwen3.7-")
     );
     openaiModels.forEach((model) => {
       expect(model.apiFormat).toBe("openai");

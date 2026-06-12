@@ -49,13 +49,25 @@ npm install
 npm run compile
 ```
 
-4. Package the extension:
+4. Install `vsce` (VS Code Extension Manager):
 
-```bash
-npm run package
-```
+   **Option A** — Install globally (requires `sudo` on Linux/macOS):
 
-5. Install the `.vsix` file:
+   ```bash
+   npm install -g @vscode/vsce
+   ```
+
+   **Option B** — Use via `npx` (no install needed):
+
+   > You can replace `npm run package` in the next step with `npx -y @vscode/vsce package`.
+
+5. Package the extension:
+
+   ```bash
+   npm run package
+   ```
+
+6. Install the `.vsix` file:
 
 ```bash
 code --install-extension opencode-go-vscode-chat-*.vsix
@@ -107,6 +119,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 ```bash
 # Install dependencies
 npm install
+
+# Install vsce for packaging (or use npx -y @vscode/vsce)
+npm install -g @vscode/vsce
 
 # Watch for changes
 npm run watch
