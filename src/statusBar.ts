@@ -1,10 +1,18 @@
 import * as vscode from "vscode";
+import type { SecretFinding } from "./secretScan";
 
 export interface UsageMetrics {
   prompt_tokens: number;
   completion_tokens: number;
   cache_hit_tokens?: number;
   cache_miss_tokens?: number;
+}
+
+export interface SecretScanReport {
+  apiFormat: "openai" | "anthropic";
+  findings: SecretFinding[];
+  redacted: boolean;
+  at: number;
 }
 
 class OcGoStatusBar {
@@ -15,6 +23,7 @@ class OcGoStatusBar {
   private _cumulativeCacheMiss = 0;
   private _maxInputTokens: number | undefined;
   private _promptTokens: number | undefined;
+  private _lastScan: SecretScanReport | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this._item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -52,6 +61,16 @@ class OcGoStatusBar {
       this._cumulativeCacheMiss = 0;
       this._updateText();
     }
+  }
+
+  recordSecretScan(report: Omit<SecretScanReport, "at">): void {
+    this._lastScan = { ...report, at: Date.now() };
+    this._updateText();
+    this._updateTooltip();
+  }
+
+  getLastScan(): SecretScanReport | undefined {
+    return this._lastScan;
   }
 
   private _updateText(): void {
@@ -109,4 +128,14 @@ export function statusBarSetPromptTokens(tokens: number): void {
 
 export function statusBarMaybeReset(hasAssistantTurn: boolean): void {
   _statusBar?.maybeResetForNewConversation(hasAssistantTurn);
+}
+
+export function statusBarRecordSecretScan(
+  report: Omit<SecretScanReport, "at">
+): void {
+  _statusBar?.recordSecretScan(report);
+}
+
+export function statusBarGetLastScan(): SecretScanReport | undefined {
+  return _statusBar?.getLastScan();
 }

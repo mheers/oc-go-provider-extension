@@ -64,6 +64,11 @@
         "command": "opencode-go.selectVisionProxy",
         "title": "Select Vision Proxy Model",
         "category": "OpenCode Go"
+      },
+      {
+        "command": "opencode-go.showSecretScanStatus",
+        "title": "Show Secret Scan Status",
+        "category": "OpenCode Go"
       }
     ],
     "configuration": {
@@ -81,6 +86,20 @@
             "qwen3.7-max"
           ],
           "description": "Vision model used as OCR proxy for non-vision models"
+        },
+        "opencodego.secretScan": {
+          "type": "string",
+          "enum": [
+            "off",
+            "redact"
+          ],
+          "default": "redact",
+          "markdownDescription": "Scan outbound chat requests for secrets (API keys, tokens, etc.) using [gitleaks](https://github.com/gitleaks/gitleaks) before sending them to the LLM. Requires the `gitleaks` binary on `$PATH` (or set `opencodego.gitleaksPath`). Detected secrets are replaced with `[REDACTED:<rule-id>]`. If gitleaks is not installed, scanning is silently disabled and a status-bar indicator appears."
+        },
+        "opencodego.gitleaksPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the `gitleaks` binary. Leave empty to resolve `gitleaks` from `$PATH`."
         }
       }
     }

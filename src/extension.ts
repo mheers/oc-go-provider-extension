@@ -2,9 +2,10 @@ import * as vscode from "vscode";
 import packageJson from "../package.json";
 import { OcGoChatModelProvider } from "./provider";
 import { registerOcGoTools } from "./tools";
-import { initStatusBar } from "./statusBar";
+import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
 import { OC_GO_MODELS, DEFAULT_VISION_PROXY_MODEL } from "./types";
+import { availability, getConfigPath } from "./secretScan";
 
 // Global provider reference for API key management
 let _provider: OcGoChatModelProvider | null = null;
@@ -118,6 +119,58 @@ export function activate(context: vscode.ExtensionContext) {
         );
       }
     })
+  );
+
+  // Secret-scan status command — surfaces whether gitleaks is available
+  // and what was last redacted in the most recent outbound request.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "opencode-go.showSecretScanStatus",
+      async () => {
+        const action = vscode.workspace
+          .getConfiguration("opencodego")
+          .get<string>("secretScan", "redact");
+        const path = getConfigPath();
+        const avail = await availability(
+          action === "off" ? "off" : "redact"
+        );
+        const last = statusBarGetLastScan();
+        const lines: string[] = [];
+        lines.push(`Action: ${action}`);
+        lines.push(`Binary: ${path}`);
+        lines.push(`Status: ${avail}`);
+        if (avail === "missing") {
+          lines.push(
+            "\nInstall gitleaks and ensure it is on $PATH, or set opencodego.gitleaksPath."
+          );
+        }
+        if (last) {
+          lines.push("");
+          lines.push(
+            `Last scan: ${new Date(last.at).toLocaleString()} (${last.apiFormat})`
+          );
+          lines.push(`Redacted: ${last.redacted}`);
+          lines.push(
+            `Findings: ${last.findings.length} (${last.findings
+              .map((f) => f.ruleId)
+              .join(", ")})`
+          );
+        } else {
+          lines.push("\nNo scans have been performed yet.");
+        }
+        const item = await vscode.window.showInformationMessage(
+          lines.join("\n"),
+          { modal: true },
+          "Open Settings"
+        );
+        if (item === "Open Settings") {
+          vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            "opencodego.secretScan"
+          );
+        }
+      }
+    )
   );
 
   console.log("[OpenCode Go Provider] Extension activated");

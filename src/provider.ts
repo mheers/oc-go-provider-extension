@@ -19,6 +19,7 @@ import type {
   OcGoRequestBody,
   AnthropicRequestBody,
   AnthropicSSEEvent,
+  OcGoApiFormat,
 } from "./types";
 import { OC_GO_MODELS } from "./types";
 import {
@@ -47,12 +48,70 @@ import {
   statusBarSetPromptTokens,
   statusBarRecordUsage,
   statusBarMaybeReset,
+  statusBarRecordSecretScan,
 } from "./statusBar";
+import { scanAndRedact, type ScannerAction } from "./secretScan";
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
 const MAX_TOOL_RESULT_CHARS = 20000;
 const MAX_TOOLS_PER_REQUEST = 128;
 const DEFAULT_MAX_TOKENS = 65536;
+const SECRET_SCAN_TIMEOUT_MS = 2_000;
+
+/**
+ * Read the configured secret-scanner action and (if set) the gitleaks
+ * binary path. Updates `process.env.OPENCODEGO_GITLEAKS_PATH` so the
+ * scanner module picks it up.
+ */
+function getSecretScanConfig(): { action: ScannerAction; path: string } {
+  const cfg = vscode.workspace.getConfiguration("opencodego");
+  const raw = cfg.get<string>("secretScan", "redact");
+  const action: ScannerAction = raw === "off" ? "off" : "redact";
+  const path = cfg.get<string>("gitleaksPath", "").trim();
+  if (path.length > 0) {
+    process.env["OPENCODEGO_GITLEAKS_PATH"] = path;
+  } else {
+    delete process.env["OPENCODEGO_GITLEAKS_PATH"];
+  }
+  return { action, path };
+}
+
+/**
+ * Run the configured secret scanner over a JSON-stringified request body
+ * and return a possibly-redacted body. Also reports findings to the
+ * status bar. On any scanner error the original body is returned
+ * unchanged — we never block a request because of scanner problems.
+ */
+async function redactRequestBody(
+  body: Json,
+  apiFormat: OcGoApiFormat
+): Promise<Json> {
+  const { action } = getSecretScanConfig();
+  if (action === "off") return body;
+
+  const serialized = JSON.stringify(body);
+  const result = await scanAndRedact(serialized, {
+    timeoutMs: SECRET_SCAN_TIMEOUT_MS,
+  });
+  if (result.findings.length > 0) {
+    statusBarRecordSecretScan({
+      apiFormat,
+      findings: result.findings,
+      redacted: result.redacted,
+    });
+  }
+  if (!result.redacted) return body;
+
+  try {
+    return JSON.parse(result.text) as Json;
+  } catch {
+    debugLog("SECRET-SCAN-PARSE-ERROR", {
+      apiFormat,
+      output: result.text.slice(0, 200),
+    });
+    return body;
+  }
+}
 const MAX_OCR_TOKENS = 16000;
 const OCR_TRUNCATION_SUFFIX = "\n\n...[truncated image analysis]";
 
@@ -84,11 +143,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
   /** Active text-embedded tool call being assembled */
   private _textToolActive:
     | {
-        name?: string;
-        index?: number;
-        argBuffer: string;
-        emitted?: boolean;
-      }
+      name?: string;
+      index?: number;
+      argBuffer: string;
+      emitted?: boolean;
+    }
     | undefined;
 
   /** Deduplicate tool calls parsed from text and structured deltas */
@@ -102,11 +161,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     cache_hit_tokens: number;
     cache_miss_tokens: number;
   } = {
-    prompt_tokens: 0,
-    completion_tokens: 0,
-    cache_hit_tokens: 0,
-    cache_miss_tokens: 0,
-  };
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      cache_hit_tokens: 0,
+      cache_miss_tokens: 0,
+    };
 
   /** OCR image deduplication cache: hash -> OCR description */
   private _ocrImageState = new Map<string, string>();
@@ -738,6 +797,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       });
     }
 
+    const scannedBody = (await redactRequestBody(
+      requestBody as unknown as Json,
+      "openai"
+    )) as unknown as OcGoRequestBody;
+
     const response = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
@@ -746,7 +810,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
         "User-Agent": this.userAgent,
       },
       signal: abortController.signal,
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(scannedBody),
     });
 
     if (!response.ok) {
@@ -841,6 +905,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       tool_choice: requestBody.tool_choice,
     });
 
+    const scannedBody = (await redactRequestBody(
+      requestBody as unknown as Json,
+      "anthropic"
+    )) as unknown as AnthropicRequestBody;
+
     const response = await fetch(`${BASE_URL}/messages`, {
       method: "POST",
       headers: {
@@ -850,7 +919,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
         "User-Agent": this.userAgent,
       },
       signal: abortController.signal,
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(scannedBody),
     });
 
     if (!response.ok) {
@@ -1012,8 +1081,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     text:
       | string
       | {
-          content: readonly unknown[];
-        },
+        content: readonly unknown[];
+      },
     _token: CancellationToken
   ): Promise<number> {
     if (typeof text === "string") {
@@ -1253,7 +1322,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       // Use LanguageModelThinkingPart on VS Code 1.120+, fallback to DataPart
       const ThinkingPart = (vscode as unknown as Record<string, unknown>)
         .LanguageModelThinkingPart as
-        | { new (value: string): LanguageModelResponsePart }
+        | { new(value: string): LanguageModelResponsePart }
         | undefined;
       if (ThinkingPart) {
         progress.report(new ThinkingPart(this._reasoningContentBuffer));
