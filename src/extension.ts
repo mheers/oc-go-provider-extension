@@ -52,33 +52,123 @@ export function activate(context: vscode.ExtensionContext) {
     "[OpenCode Go Provider] OpenCode Go tools registered successfully"
   );
 
-  // Management command to configure API key
+  // Management command — now a real menu. Clicking the status bar
+  // (or running "OpenCode Go: Manage OpenCode Go Provider") shows a
+  // quick-pick with the most common actions: set/update/clear the API
+  // key, view the secret scan status & log, pick the vision proxy
+  // model, and jump straight to the extension's settings.
   context.subscriptions.push(
     vscode.commands.registerCommand("opencode-go.manage", async () => {
       const existing = await context.secrets.get("opencode-go.apiKey");
-      const apiKey = await vscode.window.showInputBox({
-        title: "OpenCode Go API Key",
-        prompt: existing
-          ? "Update your OpenCode Go API key"
-          : "Enter your OpenCode Go API key",
-        ignoreFocusOut: true,
-        password: true,
-        value: existing ?? "",
-        placeHolder: "Enter your OpenCode Go API key...",
+      const lastScan = statusBarGetLastScan();
+      const scanAction = vscode.workspace
+        .getConfiguration("opencodego")
+        .get<string>("secretScan", "redact");
+
+      type MenuItem = vscode.QuickPickItem & { action: () => Thenable<void> };
+
+      const items: MenuItem[] = [];
+
+      // --- API key section ---------------------------------------------
+      if (existing) {
+        items.push({
+          label: "$(key) Update API Key…",
+          description: "Replace the currently stored OpenCode Go API key",
+          action: () => promptForApiKey(context, existing),
+        });
+        items.push({
+          label: "$(trash) Clear API Key",
+          description: "Remove the stored OpenCode Go API key",
+          action: async () => {
+            await context.secrets.delete("opencode-go.apiKey");
+            vscode.window.showInformationMessage(
+              "OpenCode Go API key cleared."
+            );
+            _provider?.fireModelInfoChanged();
+          },
+        });
+      } else {
+        items.push({
+          label: "$(key) Set API Key…",
+          description: "Store your OpenCode Go API key in the secret store",
+          action: () => promptForApiKey(context, undefined),
+        });
+      }
+
+      // --- Sub-menu separator -----------------------------------------
+      items.push({
+        kind: vscode.QuickPickItemKind.Separator,
+        label: "Configuration",
+        action: async () => {
+          /* separator, never invoked */
+        },
+      } as MenuItem);
+
+      items.push({
+        label: "$(eye) Select Vision Proxy Model…",
+        description:
+          "Choose which vision-capable model is used for OCR / image analysis",
+        action: () =>
+          vscode.commands.executeCommand("opencode-go.selectVisionProxy"),
       });
-      if (apiKey === undefined) {
-        return; // user canceled
+
+      items.push({
+        label: `$(shield) Secret Scan: ${scanAction}`,
+        description: `View the scanner status (currently: ${scanAction})`,
+        action: () =>
+          vscode.commands.executeCommand("opencode-go.showSecretScanStatus"),
+      });
+
+      if (lastScan) {
+        const ts = new Date(lastScan.at).toLocaleString();
+        const findingCount = lastScan.findings.length;
+        items.push({
+          label: `$(history) Show Secret Scan Log`,
+          description:
+            findingCount > 0
+              ? `Last: ${ts} — ${findingCount} finding(s), redacted`
+              : `Last: ${ts} — clean`,
+          action: () =>
+            vscode.commands.executeCommand("opencode-go.showSecretScanLog"),
+        });
+      } else {
+        items.push({
+          label: "$(history) Show Secret Scan Log",
+          description: "No scans performed yet",
+          action: () =>
+            vscode.commands.executeCommand("opencode-go.showSecretScanLog"),
+        });
       }
-      if (!apiKey.trim()) {
-        await context.secrets.delete("opencode-go.apiKey");
-        vscode.window.showInformationMessage("OpenCode Go API key cleared.");
-        _provider?.fireModelInfoChanged();
-        return;
+
+      // --- Settings section -------------------------------------------
+      items.push({
+        kind: vscode.QuickPickItemKind.Separator,
+        label: "Help",
+        action: async () => {
+          /* separator, never invoked */
+        },
+      } as MenuItem);
+
+      items.push({
+        label: "$(gear) Open OpenCode Go Settings",
+        description: "Adjust secret-scan mode, gitleaks path, vision model…",
+        action: () =>
+          vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            "opencodego"
+          ),
+      });
+
+      const picked = await vscode.window.showQuickPick(items, {
+        title: "OpenCode Go",
+        placeHolder: existing
+          ? "Choose an action — an API key is set"
+          : "Choose an action — no API key is set yet",
+        matchOnDescription: true,
+      });
+      if (picked) {
+        await picked.action();
       }
-      await context.secrets.store("opencode-go.apiKey", apiKey.trim());
-      vscode.window.showInformationMessage("OpenCode Go API key saved.");
-      // Notify VS Code that the list of available models has changed
-      _provider?.fireModelInfoChanged();
     })
   );
 
@@ -185,6 +275,41 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   console.log("[OpenCode Go Provider] Extension activated");
+}
+
+/**
+ * Show an input box that lets the user set or update the OpenCode Go
+ * API key. The prefill value is `existing` (when updating) or empty
+ * (when setting for the first time). Empty input is treated as a
+ * no-op (we never silently delete a key from this prompt — clearing
+ * is an explicit menu choice).
+ */
+async function promptForApiKey(
+  context: vscode.ExtensionContext,
+  existing: string | undefined
+): Promise<void> {
+  const apiKey = await vscode.window.showInputBox({
+    title: existing ? "Update OpenCode Go API Key" : "Set OpenCode Go API Key",
+    prompt: existing
+      ? "Replace the currently stored API key"
+      : "Enter your OpenCode Go API key",
+    ignoreFocusOut: true,
+    password: true,
+    value: existing ?? "",
+    placeHolder: "Enter your OpenCode Go API key…",
+    validateInput: (value) => {
+      if (!value.trim()) {
+        return "API key cannot be empty — use 'Clear API Key' from the menu to remove it.";
+      }
+      return undefined;
+    },
+  });
+  if (apiKey === undefined) {
+    return; // user canceled
+  }
+  await context.secrets.store("opencode-go.apiKey", apiKey.trim());
+  vscode.window.showInformationMessage("OpenCode Go API key saved.");
+  _provider?.fireModelInfoChanged();
 }
 
 export function deactivate() {

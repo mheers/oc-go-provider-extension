@@ -39,8 +39,8 @@ class FakeChildProcess extends EventEmitter {
         cb();
       },
     });
-    this.stdout = new Readable({ read() { } });
-    this.stderr = new Readable({ read() { } });
+    this.stdout = new Readable({ read() {} });
+    this.stderr = new Readable({ read() {} });
   }
   kill(): boolean {
     this.killed = true;

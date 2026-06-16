@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Status bar is now a real quick-pick menu. Clicking it (or running "OpenCode Go: Manage OpenCode Go Provider") opens a menu with: set/update/clear the API key, select the vision proxy model, view secret scan status and log, and jump to OpenCode Go settings. The previous "enter the API key" input box is now reached via the "Set/Update API Key…" menu item.
+
 ## [0.7.0] - 2026-05-19
 
 ### Added

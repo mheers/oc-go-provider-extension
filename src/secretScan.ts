@@ -260,12 +260,7 @@ function runGitleaks(
       const { writeFile: writeFileSync } = await import("fs/promises");
       await writeFileSync(staged, input, "utf8");
 
-      const json = await spawnGitleaks(
-        binary,
-        staged,
-        reportPath,
-        timeoutMs
-      );
+      const json = await spawnGitleaks(binary, staged, reportPath, timeoutMs);
       return json;
     } catch (err) {
       debugLog("SECRET-SCAN-RUN-ERROR", {
