@@ -129,11 +129,10 @@ export const trufflehogScanner: Scanner = {
     const binary = resolveTrufflehogPath();
     const t0 = Date.now();
     try {
-      const stdout = await spawnScanner(
-        binary,
-        trufflehogBuildArgs(),
-        { timeoutMs: options.timeoutMs, stdinInput: text }
-      );
+      const stdout = await spawnScanner(binary, trufflehogBuildArgs(), {
+        timeoutMs: options.timeoutMs,
+        stdinInput: text,
+      });
       const duration = Date.now() - t0;
 
       const findings = parseTrufflehogNdjson(stdout);
