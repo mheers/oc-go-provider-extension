@@ -57,7 +57,9 @@ describe("secretScanLog", () => {
 
   it("marks env-var path resolution distinctly", () => {
     secretScanLog.binaryResolved("/opt/bin/gitleaks", true);
-    expect(fake.lines[0]).toMatch(/opencodego\.gitleaksPath/);
+    // The copy should reference the per-scanner opencodego.*Path
+    // setting. The exact wording is scanner-agnostic.
+    expect(fake.lines[0]).toMatch(/opencodego\..+Path/);
   });
 
   it("emits a scanStarted header with api/bytes/timeout", () => {

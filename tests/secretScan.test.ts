@@ -127,7 +127,11 @@ beforeEach(() => {
   spawned = [];
   _resetAvailabilityCache();
   jest.clearAllMocks();
+  // Force the facade to dispatch to the gitleaks backend, regardless
+  // of what the default is.
+  process.env["OPENCODEGO_SCANNER"] = "gitleaks";
   delete process.env["OPENCODEGO_GITLEAKS_PATH"];
+  delete process.env["OPENCODEGO_TRUFFLEHOG_PATH"];
 });
 
 function enqueueVersionProbe(): void {

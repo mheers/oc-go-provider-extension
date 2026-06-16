@@ -101,12 +101,26 @@
             "redact"
           ],
           "default": "redact",
-          "markdownDescription": "Scan outbound chat requests for secrets (API keys, tokens, etc.) using [gitleaks](https://github.com/gitleaks/gitleaks) before sending them to the LLM. Requires the `gitleaks` binary on `$PATH` (or set `opencodego.gitleaksPath`). Detected secrets are replaced with `[REDACTED:<rule-id>]`. If gitleaks is not installed, scanning is silently disabled and a status-bar indicator appears."
+          "markdownDescription": "Scan outbound chat requests for secrets (API keys, tokens, etc.) before sending them to the LLM. `redact` runs the configured scanner (see `opencodego.secretScanner`); `off` short-circuits the scan. Detected secrets are replaced with `[REDACTED:<rule-id>]`. If the configured scanner is not installed, scanning is silently disabled and a status-bar indicator appears."
+        },
+        "opencodego.secretScanner": {
+          "type": "string",
+          "enum": [
+            "trufflehog",
+            "gitleaks"
+          ],
+          "default": "trufflehog",
+          "markdownDescription": "Which secret-scanner backend to use. [trufflehog](https://github.com/trufflesecurity/trufflehog) (default) has a much larger, actively-maintained detector corpus (~800 detectors, entropy-aware). [gitleaks](https://github.com/gitleaks/gitleaks) is kept for users who already have a `.gitleaks.toml` they want to reuse. Both run as local CLI binaries; neither makes network calls during a scan (`--no-verification` is always set on trufflehog)."
         },
         "opencodego.gitleaksPath": {
           "type": "string",
           "default": "",
           "markdownDescription": "Absolute path to the `gitleaks` binary. Leave empty to resolve `gitleaks` from `$PATH`."
+        },
+        "opencodego.trufflehogPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the `trufflehog` binary. Leave empty to resolve `trufflehog` from `$PATH`."
         }
       }
     }

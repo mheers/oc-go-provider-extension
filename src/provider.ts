@@ -50,7 +50,13 @@ import {
   statusBarMaybeReset,
   statusBarRecordSecretScan,
 } from "./statusBar";
-import { scanAndRedact, type ScannerAction } from "./secretScan";
+import {
+  scanAndRedact,
+  getConfigName,
+  type ScannerAction,
+  type ScannerId,
+  SCANNER_IDS,
+} from "./secretScan";
 import { secretScanLog } from "./secretScanLog";
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
@@ -60,21 +66,48 @@ const DEFAULT_MAX_TOKENS = 65536;
 const SECRET_SCAN_TIMEOUT_MS = 2_000;
 
 /**
- * Read the configured secret-scanner action and (if set) the gitleaks
- * binary path. Updates `process.env.OPENCODEGO_GITLEAKS_PATH` so the
- * scanner module picks it up.
+ * Read the configured secret-scanner backend, action, and binary
+ * paths. Updates the relevant `OPENCODEGO_*_PATH` env vars so the
+ * scanner module picks them up on the next invocation.
+ *
+ * Settings:
+ *   - `opencodego.secretScanner` (default `trufflehog`): which
+ *     backend to use.
+ *   - `opencodego.secretScan` (default `redact`): `off` short-circuits
+ *     the scan; `redact` runs the configured scanner.
+ *   - `opencodego.gitleaksPath` / `opencodego.trufflehogPath`:
+ *     absolute paths to the binaries, leave empty to resolve from
+ *     `$PATH`.
  */
-function getSecretScanConfig(): { action: ScannerAction; path: string } {
+function getSecretScanConfig(): {
+  action: ScannerAction;
+  scanner: ScannerId;
+  path: string;
+} {
   const cfg = vscode.workspace.getConfiguration("opencodego");
-  const raw = cfg.get<string>("secretScan", "redact");
-  const action: ScannerAction = raw === "off" ? "off" : "redact";
-  const path = cfg.get<string>("gitleaksPath", "").trim();
+  const rawAction = cfg.get<string>("secretScan", "redact");
+  const action: ScannerAction = rawAction === "off" ? "off" : "redact";
+  const rawScanner = cfg.get<string>("secretScanner", "trufflehog");
+  const scanner: ScannerId = (SCANNER_IDS as readonly string[]).includes(
+    rawScanner
+  )
+    ? (rawScanner as ScannerId)
+    : "trufflehog";
+  process.env["OPENCODEGO_SCANNER"] = scanner;
+  const path =
+    scanner === "gitleaks"
+      ? cfg.get<string>("gitleaksPath", "").trim()
+      : cfg.get<string>("trufflehogPath", "").trim();
+  const envKey =
+    scanner === "gitleaks"
+      ? "OPENCODEGO_GITLEAKS_PATH"
+      : "OPENCODEGO_TRUFFLEHOG_PATH";
   if (path.length > 0) {
-    process.env["OPENCODEGO_GITLEAKS_PATH"] = path;
+    process.env[envKey] = path;
   } else {
-    delete process.env["OPENCODEGO_GITLEAKS_PATH"];
+    delete process.env[envKey];
   }
-  return { action, path };
+  return { action, scanner, path };
 }
 
 /**
@@ -92,7 +125,7 @@ async function redactRequestBody(
   body: Json,
   apiFormat: OcGoApiFormat
 ): Promise<Json> {
-  const { action } = getSecretScanConfig();
+  const { action, scanner } = getSecretScanConfig();
   if (action === "off") {
     secretScanLog.scanDisabled();
     return body;
@@ -106,6 +139,7 @@ async function redactRequestBody(
     apiFormat,
     bytes: serialized.length,
     timeoutMs: SECRET_SCAN_TIMEOUT_MS,
+    backend: getConfigName(),
   });
 
   const result = await vscode.window.withProgress<
@@ -113,10 +147,14 @@ async function redactRequestBody(
   >(
     {
       location: vscode.ProgressLocation.Window,
-      title: "OpenCode Go: scanning for secrets…",
+      title: `OpenCode Go: scanning for secrets (${scanner})…`,
       cancellable: false,
     },
-    async () => scanAndRedact(serialized, { timeoutMs: SECRET_SCAN_TIMEOUT_MS })
+    async () =>
+      scanAndRedact(serialized, {
+        timeoutMs: SECRET_SCAN_TIMEOUT_MS,
+        action,
+      })
   );
 
   if (result.findings.length > 0) {

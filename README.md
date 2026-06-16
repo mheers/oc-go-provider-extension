@@ -26,12 +26,14 @@ Integrates [OpenCode Go](https://opencode.ai/docs/ja/go) models into VS Code Cop
   - Stored securely in VS Code SecretStorage
   - Managed via Command Palette (`OpenCode Go: Manage OpenCode Go Provider`)
 
-- **Outbound Secret Scanning (gitleaks)**
-  - Pre-flight scan of every chat request using [`gitleaks`](https://github.com/gitleaks/gitleaks)
+- **Outbound Secret Scanning (pluggable: trufflehog or gitleaks)**
+  - Pre-flight scan of every chat request using either [trufflehog](https://github.com/trufflesecurity/trufflehog) (default) or [gitleaks](https://github.com/gitleaks/gitleaks)
   - Detected secrets (API keys, tokens, private keys, …) are replaced with `[REDACTED:<rule-id>]`
     before the request is sent, so they never reach the LLM provider
-  - Gated by `opencodego.secretScan` (`off` | `redact`, default `redact`)
-  - Configurable binary path via `opencodego.gitleaksPath`
+  - Backend selected by `opencodego.secretScanner` (`trufflehog` | `gitleaks`, default `trufflehog`)
+  - Action gated by `opencodego.secretScan` (`off` | `redact`, default `redact`)
+  - Configurable binary paths via `opencodego.trufflehogPath` and `opencodego.gitleaksPath`
+  - TruffleHog runs with `--no-verification` and `--no-update` so it never makes network calls during a scan
   - Status surfaced via the command `OpenCode Go: Show Secret Scan Status`
 
 ## Installation

@@ -83,7 +83,9 @@ export const secretScanLog = {
   binaryResolved(binary: string, fromEnv: boolean): void {
     getChannel().appendLine(
       `[${ts()}] binary resolved: ${binary}` +
-        (fromEnv ? " (from opencodego.gitleaksPath)" : " (from $PATH)")
+        (fromEnv
+          ? " (from opencodego.gitleaksPath / opencodego.trufflehogPath)"
+          : " (from $PATH)")
     );
   },
 
@@ -91,12 +93,15 @@ export const secretScanLog = {
     apiFormat: "openai" | "anthropic";
     bytes: number;
     timeoutMs: number;
+    backend?: string;
   }): void {
     const ch = getChannel();
     ch.appendLine("──────────────────────────────");
+    const backendPart = input.backend ? `, backend=${input.backend}` : "";
     ch.appendLine(
-      `[${ts()}] ▶ scan started: api=${input.apiFormat}, ` +
-        `body=${fmtBytes(input.bytes)}, timeout=${input.timeoutMs}ms`
+      `[${ts()}] ▶ scan started: api=${input.apiFormat}` +
+        backendPart +
+        `, body=${fmtBytes(input.bytes)}, timeout=${input.timeoutMs}ms`
     );
   },
 

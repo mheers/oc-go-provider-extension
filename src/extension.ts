@@ -5,7 +5,7 @@ import { registerOcGoTools } from "./tools";
 import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
 import { OC_GO_MODELS, DEFAULT_VISION_PROXY_MODEL } from "./types";
-import { availability, getConfigPath } from "./secretScan";
+import { availability, getConfigPath, getConfigName } from "./secretScan";
 import { secretScanLog, disposeChannel } from "./secretScanLog";
 
 // Global provider reference for API key management
@@ -64,6 +64,9 @@ export function activate(context: vscode.ExtensionContext) {
       const scanAction = vscode.workspace
         .getConfiguration("opencodego")
         .get<string>("secretScan", "redact");
+      const scanBackend = vscode.workspace
+        .getConfiguration("opencodego")
+        .get<string>("secretScanner", "trufflehog");
 
       type MenuItem = vscode.QuickPickItem & { action: () => Thenable<void> };
 
@@ -114,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       items.push({
         label: `$(shield) Secret Scan: ${scanAction}`,
-        description: `View the scanner status (currently: ${scanAction})`,
+        description: `View the scanner status (backend: ${scanBackend})`,
         action: () =>
           vscode.commands.executeCommand("opencode-go.showSecretScanStatus"),
       });
@@ -151,7 +154,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       items.push({
         label: "$(gear) Open OpenCode Go Settings",
-        description: "Adjust secret-scan mode, gitleaks path, vision model…",
+        description: "Adjust secret-scan mode, scanner path, vision model…",
         action: () =>
           vscode.commands.executeCommand(
             "workbench.action.openSettings",
@@ -215,8 +218,9 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Secret-scan status command — surfaces whether gitleaks is available
-  // and what was last redacted in the most recent outbound request.
+  // Secret-scan status command — surfaces whether the configured
+  // scanner is available and what was last redacted in the most
+  // recent outbound request.
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "opencode-go.showSecretScanStatus",
@@ -229,11 +233,12 @@ export function activate(context: vscode.ExtensionContext) {
         const last = statusBarGetLastScan();
         const lines: string[] = [];
         lines.push(`Action: ${action}`);
+        lines.push(`Scanner: ${getConfigName()}`);
         lines.push(`Binary: ${path}`);
         lines.push(`Status: ${avail}`);
         if (avail === "missing") {
           lines.push(
-            "\nInstall gitleaks and ensure it is on $PATH, or set opencodego.gitleaksPath."
+            `\nInstall the scanner binary and ensure it is on $PATH, or set the matching \`opencodego.<scanner>Path\` setting.`
           );
         }
         if (last) {
@@ -267,7 +272,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Reveal the "OpenCode Go: Secret Scan" output channel. This gives
   // users a single clickable way to see per-request scan history, the
-  // resolved gitleaks binary path, and any per-finding detail.
+  // resolved scanner binary path, and any per-finding detail.
   context.subscriptions.push(
     vscode.commands.registerCommand("opencode-go.showSecretScanLog", () => {
       secretScanLog.reveal();

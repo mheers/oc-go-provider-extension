@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Pluggable secret scanner** with [trufflehog](https://github.com/trufflesecurity/trufflehog) as the new default. TruffleHog's detector corpus (~800 detectors, entropy-aware) is substantially larger and more actively maintained than gitleaks'. Verification is off by default (`--no-verification`) so the chat path never makes network calls. New setting `opencodego.secretScanner` (`"trufflehog"` | `"gitleaks"`, default `"trufflehog"`) selects the backend; `opencodego.trufflehogPath` overrides the binary path. The previous `opencodego.gitleaksPath` setting is preserved. Internal refactor: secret scanning is now a `src/scanners/` module with a `Scanner` interface and a registry; adding a new backend is one new file in that directory.
+
 ### Changed
 
 - Status bar is now a real quick-pick menu. Clicking it (or running "OpenCode Go: Manage OpenCode Go Provider") opens a menu with: set/update/clear the API key, select the vision proxy model, view secret scan status and log, and jump to OpenCode Go settings. The previous "enter the API key" input box is now reached via the "Set/Update API Key…" menu item.
