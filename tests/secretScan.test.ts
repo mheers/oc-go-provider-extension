@@ -18,7 +18,11 @@ import { debugLog } from "../src/logging";
  *
  * The mock keeps a registry of pending responses per call, keyed by
  * the first CLI argument, so we can distinguish the `--version` probe
- * (sent by `availability()`) from the actual `detect --stdin` scan.
+ * (sent by `availability()`) from the actual `detect --pipe -s` scan.
+ *
+ * The `reportPath` for the fake scan is parsed out of the spawn args
+ * and the queued `stdout` is written to that file on close() so the
+ * real code path (which reads the JSON report from disk) is exercised.
  */
 class FakeChildProcess extends EventEmitter {
   public stdin: Writable;
@@ -35,8 +39,8 @@ class FakeChildProcess extends EventEmitter {
         cb();
       },
     });
-    this.stdout = new Readable({ read() {} });
-    this.stderr = new Readable({ read() {} });
+    this.stdout = new Readable({ read() { } });
+    this.stderr = new Readable({ read() { } });
   }
   kill(): boolean {
     this.killed = true;
@@ -86,6 +90,17 @@ jest.mock("child_process", () => {
         (child.stdout as Readable).push(null);
         if (next.stderr) child.stderr.push(next.stderr);
         (child.stderr as Readable).push(null);
+        // The fake "gitleaks" writes its JSON report to whatever path
+        // was passed via `--report-path` (parsed out of args here).
+        // Production reads the report back from disk on `close`.
+        const reportPath = extractReportPath(args);
+        if (reportPath && next.stdout !== undefined) {
+          try {
+            require("fs").writeFileSync(reportPath, next.stdout, "utf8");
+          } catch {
+            /* swallow — production code will report the read error */
+          }
+        }
         child.emit("close", next.exitCode ?? 0);
       };
       child.stdin.on("finish", send);
@@ -94,6 +109,12 @@ jest.mock("child_process", () => {
     }),
   };
 });
+
+function extractReportPath(args: string[]): string | undefined {
+  const i = args.indexOf("--report-path");
+  if (i < 0 || i + 1 >= args.length) return undefined;
+  return args[i + 1];
+}
 
 jest.mock("../src/logging", () => ({
   debugLog: jest.fn(),

@@ -2,23 +2,30 @@
  * Secret scanning for outbound chat requests.
  *
  * Wraps the `gitleaks` CLI (https://github.com/gitleaks/gitleaks) and runs
- * it in `detect --no-git --stdin` mode against the serialized request body
- * before it is sent to the OpenCode Go API. Detected secrets are redacted
- * in-place (replaced with `[REDACTED:<rule-id>]`) so they never reach the
- * LLM provider.
+ * it in `detect --no-git --pipe -s <staged-file>` mode against the
+ * serialized request body before it is sent to the OpenCode Go API.
+ * Detected secrets are redacted in-place (replaced with
+ * `[REDACTED:<rule-id>]`) so they never reach the LLM provider.
  *
  * Design notes:
  * - gitleaks is a static analyzer with no MITM/proxy mode, so this is a
  *   pre-flight scan of the JSON body, not a network interceptor.
+ * - gitleaks v8.30.x requires both `--pipe` (read stdin) AND a real
+ *   source path on `-s`; without `-s` it scans 0 bytes regardless of
+ *   the stdin content. We therefore stage the JSON body to a temp
+ *   file in a private tmpdir and pass that path via `-s`.
  * - The gitleaks binary is assumed to be on `$PATH` (configurable via
- *   `opencodego.gitleaksPath`). If it is missing the scanner degrades to a
- *   no-op and reports the status via `availability()`.
- * - All work is async, non-blocking, and bounded by a short timeout so a
- *   hung gitleaks process cannot stall chat.
+ *   `opencodego.gitleaksPath`). If it is missing the scanner degrades
+ *   to a no-op and reports the status via `availability()`.
+ * - All work is async, non-blocking, and bounded by a short timeout so
+ *   a hung gitleaks process cannot stall chat.
  */
 import { spawn } from "child_process";
 import type { ChildProcess } from "child_process";
 import { access, constants } from "fs/promises";
+import { mkdtemp, readFile, rm } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { debugLog } from "./logging";
 import { secretScanLog } from "./secretScanLog";
 
@@ -231,11 +238,61 @@ function runGitleaks(
   input: string,
   timeoutMs: number
 ): Promise<string> {
+  // gitleaks v8 requires both `--pipe` (to read stdin) AND `-s` (a
+  // real file path) — without a source path it scans 0 bytes and
+  // reports "no leaks found" even when the stdin is full of secrets.
+  // We therefore stage the input to a temp file in a fresh tmpdir
+  // and pass that path via `-s`. The JSON report is written to a
+  // sibling file (`report.json`) and read back here. The tmpdir is
+  // removed in the finally block; on Linux it's just `rm -rf` so the
+  // cost is negligible.
+  return (async () => {
+    let staged: string | undefined;
+    let dir: string | undefined;
+    let reportPath: string | undefined;
+    try {
+      dir = await mkdtemp(join(tmpdir(), "ocg-scanner-"));
+      staged = join(dir, "payload");
+      reportPath = join(dir, "report.json");
+      // gitleaks' default reporter writes the report file synchronously
+      // on close(); forking from here is fine because we never reuse
+      // the same path within the same mkdtemp.
+      const { writeFile: writeFileSync } = await import("fs/promises");
+      await writeFileSync(staged, input, "utf8");
+
+      const json = await spawnGitleaks(
+        binary,
+        staged,
+        reportPath,
+        timeoutMs
+      );
+      return json;
+    } catch (err) {
+      debugLog("SECRET-SCAN-RUN-ERROR", {
+        binary,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return "";
+    } finally {
+      if (dir) {
+        try {
+          await rm(dir, { recursive: true, force: true });
+        } catch {
+          /* best effort cleanup */
+        }
+      }
+    }
+  })();
+}
+
+function spawnGitleaks(
+  binary: string,
+  sourcePath: string,
+  reportPath: string,
+  timeoutMs: number
+): Promise<string> {
   return new Promise((resolve) => {
     let settled = false;
-    let stdout = "";
-    let stdoutBytes = 0;
-    let truncated = false;
     let timedOut = false;
     let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
@@ -254,14 +311,15 @@ function runGitleaks(
           "detect",
           "--no-git",
           "--no-banner",
-          "--stdin",
+          "--pipe",
+          "-s",
+          sourcePath,
           "--report-format",
           "json",
+          "--report-path",
+          reportPath,
           "--exit-code",
           "0", // never fail the request even if findings exist
-          "--redact",
-          "0", // we'll do our own redaction so we can label with rule id
-          "-",
         ],
         { stdio: ["pipe", "pipe", "pipe"] }
       );
@@ -274,44 +332,57 @@ function runGitleaks(
       return;
     }
 
-    // @types/node marks stdout/stderr/stdin on ChildProcess as nullable
-    // for stdio: "inherit" callers. We forced stdio: ["pipe", ...] above
-    // so they are guaranteed non-null at runtime.
-    const stdoutStream = child.stdout;
-    const stderrStream = child.stderr;
     const stdinStream = child.stdin;
-    if (!stdoutStream || !stderrStream || !stdinStream) {
+    if (!stdinStream) {
       finish("");
       return;
     }
-
-    stdoutStream.setEncoding("utf8");
-    stdoutStream.on("data", (chunk: string) => {
-      if (truncated) return;
-      stdoutBytes += Buffer.byteLength(chunk, "utf8");
-      if (stdoutBytes > MAX_OUTPUT_BYTES) {
-        truncated = true;
-        return;
+    // Swallow stdin errors. We don't use stdin for input (the source
+    // file is the source of truth) but gitleaks still wants something
+    // on stdin to consume when `--pipe` is set, so we send an empty
+    // newline and close.
+    stdinStream.on("error", () => {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* ignore */
       }
-      stdout += chunk;
+      finish("");
     });
-    stderrStream.setEncoding("utf8");
-    stderrStream.on("data", () => {
-      /* gitleaks writes findings to stdout, not stderr */
-    });
-    // Swallow stdin errors (e.g. EPIPE if gitleaks closes early on
-    // pathological input). The write callback below handles the
-    // error path; without an 'error' listener the process would
-    // crash with an unhandled exception.
-    stdinStream.on("error", () => finish(""));
     child.on("error", () => finish(""));
     child.on("close", () => {
-      // gitleaks sometimes exits non-zero when findings exist; with
-      // --exit-code 0 this should always be 0, but be defensive.
       if (timedOut) {
         secretScanLog.scanUnavailable("timeout", `after ${timeoutMs}ms`);
+        finish("");
+        return;
       }
-      finish(truncated ? "" : stdout);
+      // The JSON report lives on disk (not on stdout) because
+      // gitleaks v8 opens the report file with `os.Create` and
+      // `/dev/stdout` is not a valid target from a child process.
+      // Read it back; if it's empty or missing, return an empty
+      // string so the caller logs "no findings".
+      void (async () => {
+        try {
+          const raw = await readFile(reportPath, "utf8");
+          // gitleaks may emit a JSON array (`[]` or `[ {...} ]`) or
+          // sometimes a single object; both are fine for our parser.
+          if (raw.length > MAX_OUTPUT_BYTES) {
+            debugLog("SECRET-SCAN-OUTPUT-TRUNCATED", {
+              bytes: raw.length,
+              max: MAX_OUTPUT_BYTES,
+            });
+            finish("");
+            return;
+          }
+          finish(raw);
+        } catch (err) {
+          debugLog("SECRET-SCAN-REPORT-READ-ERROR", {
+            reportPath,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          finish("");
+        }
+      })();
     });
 
     timer = setTimeout(() => {
@@ -321,22 +392,19 @@ function runGitleaks(
       } catch {
         /* ignore */
       }
-      finish("");
     }, timeoutMs);
     timer.unref();
 
+    // Feed stdin so gitleaks doesn't hang waiting for EOF on the
+    // pipe. The actual content is read from the source file.
     try {
-      stdinStream.write(input, "utf8", (err) => {
-        if (err) {
-          try {
-            child.kill("SIGKILL");
-          } catch {
-            /* ignore */
-          }
-          finish("");
+      stdinStream.write("\n", "utf8", () => {
+        try {
+          stdinStream.end();
+        } catch {
+          /* ignore */
         }
       });
-      stdinStream.end();
     } catch {
       try {
         child.kill("SIGKILL");
