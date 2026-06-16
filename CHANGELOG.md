@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Critical: trufflehog was silently dropping every unverified finding.** The scanner invoked `trufflehog filesystem` with `--no-verification` but without `--results=unverified,unknown`. When `--no-verification` is set, trufflehog drops the `verified` bucket **and** the `unverified` bucket, so every unverified detection (i.e. almost every secret we'd ever see in the chat path, since we never phone home) was silently absent from the NDJSON output. The result was a clean `findings: []` report, the original body was forwarded to the LLM, and the user-visible log said "✓ clean". This caused the `ghp_…` token in `worst-secret-leaks-demo/cmd/server/main.go` (and any other real-world secret that doesn't happen to also be `verified`) to leak through. The fix adds `--results=unverified,unknown` so unverified detections are emitted and the redaction logic runs against them. The test suite now pins the exact argv to prevent regression.
+
+- **TruffleHog now uses the `stdin` subcommand instead of `filesystem`.** Both subcommands accept the same flags, performance is equivalent, but `stdin` removes the per-scan temp-file staging (one less write + one less unlink per outbound request) and closes a small attack surface where a crash mid-scan could leave the request body — including any not-yet-redacted secrets — on disk in `/tmp`.
+
+### Changed
+
+- The "scan unavailable" and "could not parse … output" log lines in the "OpenCode Go: Secret Scan" output channel are now backend-agnostic: they interpolate the name of the currently configured scanner (read from `OPENCODEGO_SCANNER`, defaulting to `trufflehog`) instead of hard-coding "gitleaks". Previously these messages lied when the user had selected `trufflehog`.
+
+- The trufflehog backend now also emits a `SECRET-SCAN` debug log line on clean runs (with `findingCount: 0` and the elapsed `durationMs`) so the duration is visible in the extension log even when nothing was redacted.
+
 ### Added
 
 - **Pluggable secret scanner** with [trufflehog](https://github.com/trufflesecurity/trufflehog) as the new default. TruffleHog's detector corpus (~800 detectors, entropy-aware) is substantially larger and more actively maintained than gitleaks'. Verification is off by default (`--no-verification`) so the chat path never makes network calls. New setting `opencodego.secretScanner` (`"trufflehog"` | `"gitleaks"`, default `"trufflehog"`) selects the backend; `opencodego.trufflehogPath` overrides the binary path. The previous `opencodego.gitleaksPath` setting is preserved. Internal refactor: secret scanning is now a `src/scanners/` module with a `Scanner` interface and a registry; adding a new backend is one new file in that directory.

@@ -74,6 +74,22 @@ function redactPreview(secret: string): string {
 }
 
 /**
+ * Read the currently configured scanner's display name from
+ * `process.env`, mirroring the registry lookup in `secretScan.ts`.
+ *
+ * This is duplicated here (rather than imported from `secretScan.ts`)
+ * to avoid a circular import: `secretScan.ts` imports this module for
+ * logging, so we cannot import it back. The lookup is one env-var
+ * read so the duplication is cheap; if `OPENCODEGO_SCANNER` is unset
+ * we fall back to the same default the registry uses (`trufflehog`).
+ */
+function currentBackendName(): string {
+  const raw = process.env["OPENCODEGO_SCANNER"];
+  if (raw === "gitleaks" || raw === "trufflehog") return raw;
+  return "trufflehog";
+}
+
+/**
  * A single, well-typed surface for emitting log lines. Every entrypoint
  * of the secret-scan pipeline funnels through one of these functions so
  * the output channel is the single source of truth for "what happened
@@ -137,19 +153,20 @@ export const secretScanLog = {
     detail?: string
   ): void {
     const ch = getChannel();
+    const backend = currentBackendName();
     const reasonText =
       reason === "missing"
-        ? "gitleaks binary not found on $PATH and opencodego.gitleaksPath is unset"
+        ? `${backend} binary not found on $PATH and opencodego.${backend}Path is unset`
         : reason === "timeout"
-          ? "gitleaks scan timed out"
-          : "gitleaks process failed to start";
+          ? `${backend} scan timed out`
+          : `${backend} process failed to start`;
     ch.appendLine(`[${ts()}] ✗ scan unavailable — ${reasonText}`);
     if (detail) ch.appendLine(`    ${detail}`);
   },
 
   scanParseError(preview: string): void {
     getChannel().appendLine(
-      `[${ts()}] ✗ could not parse gitleaks output (re-using original body): ${preview}`
+      `[${ts()}] ✗ could not parse ${currentBackendName()} output (re-using original body): ${preview}`
     );
   },
 

@@ -127,6 +127,9 @@ describe("secretScanLog", () => {
   });
 
   it("emits an unavailable line with reason-specific copy", () => {
+    // Force the configured backend to gitleaks for this test so the
+    // emitted copy is deterministic. (Default would be trufflehog.)
+    process.env["OPENCODEGO_SCANNER"] = "gitleaks";
     secretScanLog.scanUnavailable("missing");
     expect(fake.lines[0]).toMatch(/gitleaks binary not found/);
 
@@ -137,12 +140,22 @@ describe("secretScanLog", () => {
     secretScanLog.scanUnavailable("spawn-error", "ENOENT");
     expect(fake.lines[3]).toMatch(/gitleaks process failed to start/);
     expect(fake.lines[4]).toMatch(/ENOENT/);
+    delete process.env["OPENCODEGO_SCANNER"];
+  });
+
+  it("emits an unavailable line for the trufflehog backend too", () => {
+    // No OPENCODEGO_SCANNER set: registry default is trufflehog.
+    delete process.env["OPENCODEGO_SCANNER"];
+    secretScanLog.scanUnavailable("missing");
+    expect(fake.lines[0]).toMatch(/trufflehog binary not found/);
   });
 
   it("emits a parse-error line with the preview snippet", () => {
+    process.env["OPENCODEGO_SCANNER"] = "gitleaks";
     secretScanLog.scanParseError("not json at all");
     expect(fake.lines[0]).toMatch(/could not parse gitleaks output/);
     expect(fake.lines[0]).toMatch(/not json at all/);
+    delete process.env["OPENCODEGO_SCANNER"];
   });
 
   it("reveal() calls show() on the underlying channel", () => {

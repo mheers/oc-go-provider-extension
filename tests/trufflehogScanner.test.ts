@@ -16,15 +16,19 @@ import { debugLog } from "../src/logging";
  * Drive the `trufflehog` backend through the same `child_process.spawn`
  * mock pattern used by `secretScan.test.ts`.
  *
- * Key differences from the gitleaks test:
- *   - TruffleHog reads the staged file directly via a positional path
- *     argument (`trufflehog filesystem <path>`), so the queue
- *     `matchArgs` looks for the `filesystem` subcommand.
+ * Key facts exercised here:
+ *   - TruffleHog is invoked as `trufflehog stdin …` — the request body
+ *     is piped to the child process's stdin, not staged to a temp
+ *     file. The queue's `matchArgs` looks for the `stdin` subcommand.
  *   - TruffleHog emits one finding per line (NDJSON) on stdout, with
  *     progress log lines possibly interleaved. We stage
  *     `--log-level=-1` to suppress those in production; in tests we
  *     can also queue log-prefixed lines to verify the parser ignores
  *     them.
+ *   - The flag set MUST include `--results=unverified,unknown`. Without
+ *     it, `--no-verification` causes trufflehog to silently drop every
+ *     unverified finding from the JSON output, so secrets would leak
+ *     through. This test pins the exact argv to catch regressions.
  */
 class FakeChildProcess extends EventEmitter {
   public stdin: Writable;
@@ -126,9 +130,9 @@ function enqueueVersionProbe(): void {
   });
 }
 
-function enqueueFilesystemScan(stdout: string, exitCode = 0): void {
+function enqueueStdinScan(stdout: string, exitCode = 0): void {
   queue.push({
-    matchArgs: (args) => args[0] === "filesystem",
+    matchArgs: (args) => args[0] === "stdin",
     stdout,
     exitCode,
   });
@@ -138,7 +142,7 @@ const AVAILABLE = "available" as const;
 
 describe("scanAndRedact (trufflehog backend)", () => {
   it("returns the input unchanged when trufflehog finds nothing", async () => {
-    enqueueFilesystemScan("");
+    enqueueStdinScan("");
     const result = await scanAndRedact("hello world", {
       timeoutMs: 1000,
       availabilityOverride: AVAILABLE,
@@ -169,7 +173,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
         },
       },
     });
-    enqueueFilesystemScan(`${finding}\n`);
+    enqueueStdinScan(`${finding}\n`);
     const result = await scanAndRedact(
       'const gh = "ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8";',
       { timeoutMs: 1000, availabilityOverride: AVAILABLE }
@@ -193,7 +197,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
       DetectorName: "AWS",
       Raw: "AKIAIOSFODNN7EXAMPLE",
     });
-    enqueueFilesystemScan(`${a}\n${b}\n`);
+    enqueueStdinScan(`${a}\n${b}\n`);
     const result = await scanAndRedact(
       'aws="AKIAIOSFODNN7EXAMPLE"; gh="ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8";',
       { timeoutMs: 1000, availabilityOverride: AVAILABLE }
@@ -214,7 +218,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
       '{"level":"info-0","msg":"running source"}',
       "---",
     ].join("\n");
-    enqueueFilesystemScan(`${noise}\n${finding}\n`);
+    enqueueStdinScan(`${noise}\n${finding}\n`);
     const result = await scanAndRedact(
       'const gh = "ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8";',
       { timeoutMs: 1000, availabilityOverride: AVAILABLE }
@@ -230,7 +234,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
     });
     const noDetector = JSON.stringify({ Raw: "no-detector" });
     const noRaw = JSON.stringify({ DetectorName: "NoRaw" });
-    enqueueFilesystemScan(`${good}\n${noDetector}\n${noRaw}\n`);
+    enqueueStdinScan(`${good}\n${noDetector}\n${noRaw}\n`);
     const result = await scanAndRedact(
       'const gh = "ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8";',
       { timeoutMs: 1000, availabilityOverride: AVAILABLE }
@@ -246,7 +250,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
     });
     expect(result.redacted).toBe(false);
     expect(result.findings).toEqual([]);
-    expect(spawned.find((c) => c.args[0] === "filesystem")).toBeUndefined();
+    expect(spawned.find((c) => c.args[0] === "stdin")).toBeUndefined();
   });
 
   it("logs findings via debugLog with backend=trufflehog", async () => {
@@ -254,7 +258,7 @@ describe("scanAndRedact (trufflehog backend)", () => {
       DetectorName: "Github",
       Raw: "ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8",
     });
-    enqueueFilesystemScan(`${finding}\n`);
+    enqueueStdinScan(`${finding}\n`);
     await scanAndRedact('s = "ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8"', {
       timeoutMs: 1000,
       availabilityOverride: AVAILABLE,
@@ -269,24 +273,55 @@ describe("scanAndRedact (trufflehog backend)", () => {
     );
   });
 
-  it("stages the input to a real file before invoking the binary", async () => {
-    enqueueFilesystemScan("");
+  it("invokes trufflehog via the `stdin` subcommand (no temp file)", async () => {
+    enqueueStdinScan("");
     await scanAndRedact("hello world", {
       timeoutMs: 1000,
       availabilityOverride: AVAILABLE,
     });
-    const call = spawned.find((c) => c.args[0] === "filesystem");
+    const call = spawned.find((c) => c.args[0] === "stdin");
     expect(call).toBeDefined();
-    // The last arg is the staged file path. We can't read it back
-    // (the scanner already unlinked it) but we can assert the binary
-    // arg shape.
-    expect(call?.args).toContain("filesystem");
-    expect(call?.args).toContain("--no-verification");
-    expect(call?.args).toContain("--json");
-    // Positional path arg exists and is non-empty.
-    const positional = call?.args[call.args.length - 1] ?? "";
-    expect(positional.length).toBeGreaterThan(0);
-    expect(positional).toMatch(/payload$/);
+    // The full arg list is pinned: `filesystem` is no longer used
+    // (stdin keeps the body out of /tmp), and `--results=unverified,unknown`
+    // is the load-bearing flag that makes the scanner actually
+    // report unverified findings.
+    expect(call?.args).toEqual([
+      "stdin",
+      "--no-verification",
+      "--no-update",
+      "--no-color",
+      "--json",
+      "--log-level=-1",
+      "--filter-entropy=3.0",
+      "--results=unverified,unknown",
+    ]);
+  });
+
+  it("passes the request body to trufflehog via stdin (no positional path)", async () => {
+    enqueueStdinScan("");
+    await scanAndRedact("hello world", {
+      timeoutMs: 1000,
+      availabilityOverride: AVAILABLE,
+    });
+    const call = spawned.find((c) => c.args[0] === "stdin");
+    // No positional <path> arg should follow the flag set.
+    expect(call?.args).not.toContain("payload");
+    expect(call?.args).not.toContain("--directory");
+  });
+
+  it("also emits a SECRET-SCAN log line on a clean run (duration only)", async () => {
+    enqueueStdinScan("");
+    await scanAndRedact("hello world", {
+      timeoutMs: 1000,
+      availabilityOverride: AVAILABLE,
+    });
+    expect(mockedDebugLog).toHaveBeenCalledWith(
+      "SECRET-SCAN",
+      expect.objectContaining({
+        backend: "trufflehog",
+        findingCount: 0,
+      })
+    );
   });
 });
 
