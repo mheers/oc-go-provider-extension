@@ -65,9 +65,10 @@ const FAMILIES: Record<string, FamilyConfig> = {
   },
   "qwen3.6": {
     levels: ["on", "off"],
-    getParams: (level) => ({
-      chat_template_kwargs: { enable_thinking: level === "on" },
-    }),
+    getParams: (level) =>
+      level === "on"
+        ? { thinking: { type: "enabled" as const, budget_tokens: 16000 } }
+        : { thinking: { type: "disabled" as const } },
     suffix: "thinking",
   },
   "qwen3.5": {

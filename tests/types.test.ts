@@ -427,12 +427,12 @@ describe("OC_GO_MODELS", () => {
     expect(model?.maxOutput).toBe(65536);
   });
 
-  it("should have Qwen3.6 Plus model with OpenAI API format", () => {
+  it("should have Qwen3.6 Plus model with Anthropic API format", () => {
     const model = OC_GO_MODELS.find((m) => m.id === "qwen3.6-plus");
     expect(model).toBeDefined();
     expect(model?.name).toBe("Qwen3.6 Plus");
     expect(model?.supportsVision).toBe(true);
-    expect(model?.apiFormat).toBe("openai");
+    expect(model?.apiFormat).toBe("anthropic");
     expect(model?.contextWindow).toBe(1000000);
     expect(model?.maxOutput).toBe(65536);
   });
@@ -469,15 +469,41 @@ describe("OC_GO_MODELS", () => {
     expect(model?.maxOutput).toBe(65536);
   });
 
+  it("should have Kimi K2.7 Code model with OpenAI API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "kimi-k2.7-code");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Kimi K2.7 Code");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.thinkingMode).toBe("always");
+    expect(model?.fixedTemperature).toBe(1);
+    expect(model?.contextWindow).toBe(262144);
+    expect(model?.maxOutput).toBe(262144);
+  });
+
+  it("should have Hy3 Preview model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "hy3-preview");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Hy3 Preview");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.thinkingMode).toBe("switchable");
+  });
+
   it("should have correct API formats for each model", () => {
     const anthropicModels = OC_GO_MODELS.filter(
-      (m) => m.id.startsWith("minimax-") || m.id.startsWith("qwen3.7-")
+      (m) =>
+        m.id.startsWith("minimax-") ||
+        m.id.startsWith("qwen3.7-") ||
+        m.id.startsWith("qwen3.6-")
     );
     anthropicModels.forEach((model) => {
       expect(model.apiFormat).toBe("anthropic");
     });
     const openaiModels = OC_GO_MODELS.filter(
-      (m) => !m.id.startsWith("minimax-") && !m.id.startsWith("qwen3.7-")
+      (m) =>
+        !m.id.startsWith("minimax-") &&
+        !m.id.startsWith("qwen3.7-") &&
+        !m.id.startsWith("qwen3.6-")
     );
     openaiModels.forEach((model) => {
       expect(model.apiFormat).toBe("openai");

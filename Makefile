@@ -10,7 +10,8 @@ NPM_FLAGS ?=
 VSCE    ?= npx -y @vscode/vsce
 
 .PHONY: help all install compile watch test test-watch test-coverage \
-        lint lint-fix format format-check clean package package-no-deps publish
+        lint lint-fix format format-check clean package package-no-deps publish \
+        sync-models sync-models-apply
 
 .DEFAULT_GOAL := help
 
@@ -62,3 +63,9 @@ publish: ## Publish the extension to the VS Code Marketplace
 
 clean: ## Remove build artifacts and installed deps
 	rm -rf out node_modules
+
+sync-models: ## Fetch model list from OpenCode Go API and show differences (dry-run)
+	$(NODE) scripts/sync-models.mjs
+
+sync-models-apply: ## Fetch model list and insert new models into src/types.ts
+	$(NODE) scripts/sync-models.mjs --apply
