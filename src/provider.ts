@@ -51,6 +51,7 @@ import {
   statusBarRecordSecretScan,
 } from "./statusBar";
 import { scanAndRedact, type ScannerAction } from "./secretScan";
+import { secretScanLog } from "./secretScanLog";
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
 const MAX_TOOL_RESULT_CHARS = 20000;
@@ -81,30 +82,66 @@ function getSecretScanConfig(): { action: ScannerAction; path: string } {
  * and return a possibly-redacted body. Also reports findings to the
  * status bar. On any scanner error the original body is returned
  * unchanged — we never block a request because of scanner problems.
+ *
+ * The scan is wrapped in `vscode.window.withProgress` so the user sees a
+ * small notification in the status bar during the (typically < 100ms)
+ * scan, and detailed per-finding output is written to the dedicated
+ * "OpenCode Go: Secret Scan" output channel.
  */
 async function redactRequestBody(
   body: Json,
   apiFormat: OcGoApiFormat
 ): Promise<Json> {
   const { action } = getSecretScanConfig();
-  if (action === "off") return body;
+  if (action === "off") {
+    secretScanLog.scanDisabled();
+    return body;
+  }
 
   const serialized = JSON.stringify(body);
-  const result = await scanAndRedact(serialized, {
+  // Emit the per-request header so the output channel shows one
+  // clearly-bounded block per outbound request, even if multiple chat
+  // turns fire in quick succession.
+  secretScanLog.scanStarted({
+    apiFormat,
+    bytes: serialized.length,
     timeoutMs: SECRET_SCAN_TIMEOUT_MS,
   });
+
+  const result = await vscode.window.withProgress<
+    Awaited<ReturnType<typeof scanAndRedact>>
+  >(
+    {
+      location: vscode.ProgressLocation.Window,
+      title: "OpenCode Go: scanning for secrets…",
+      cancellable: false,
+    },
+    async () => scanAndRedact(serialized, { timeoutMs: SECRET_SCAN_TIMEOUT_MS })
+  );
+
   if (result.findings.length > 0) {
     statusBarRecordSecretScan({
       apiFormat,
       findings: result.findings,
       redacted: result.redacted,
     });
+    // Surface a transient, non-blocking notification. Clicking it
+    // opens the output channel where the full finding list lives.
+    void vscode.window
+      .showInformationMessage(
+        `OpenCode Go redacted ${result.findings.length} secret(s) before sending.`,
+        "Show Log"
+      )
+      .then((picked) => {
+        if (picked === "Show Log") secretScanLog.reveal();
+      });
   }
   if (!result.redacted) return body;
 
   try {
     return JSON.parse(result.text) as Json;
   } catch {
+    secretScanLog.scanParseError(result.text.slice(0, 200));
     debugLog("SECRET-SCAN-PARSE-ERROR", {
       apiFormat,
       output: result.text.slice(0, 200),

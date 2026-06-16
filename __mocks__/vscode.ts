@@ -302,7 +302,9 @@ export enum StatusBarAlignment {
 
 export const window = {
   showInputBox: jest.fn(),
-  showInformationMessage: jest.fn(),
+  showInformationMessage: jest.fn((_message: string, ..._items: string[]) =>
+    Promise.resolve<string | undefined>(undefined)
+  ),
   showErrorMessage: jest.fn(),
   createStatusBarItem: jest.fn().mockReturnValue({
     show: jest.fn(),
@@ -312,7 +314,36 @@ export const window = {
     tooltip: "",
     command: undefined,
   }),
+  createOutputChannel: jest.fn().mockReturnValue({
+    appendLine: jest.fn(),
+    show: jest.fn(),
+    dispose: jest.fn(),
+  }),
+  withProgress: jest.fn(
+    <R>(_options: unknown, task: (progress: unknown) => Promise<R>) =>
+      task({ report: jest.fn() })
+  ) as <R>(
+    options: unknown,
+    task: (progress: {
+      report: (value: { message?: string; increment?: number }) => void;
+    }) => Promise<R>
+  ) => Promise<R>,
 };
+
+export enum ProgressLocation {
+  Window = 1,
+  Notification = 10,
+}
+
+export interface OutputChannel {
+  appendLine(line: string): void;
+  append(value: string): void;
+  clear(): void;
+  show(preserveFocus?: boolean): void;
+  hide(): void;
+  dispose(): void;
+  readonly name: string;
+}
 
 export const workspace = {
   getConfiguration: jest.fn((_section?: string) => ({

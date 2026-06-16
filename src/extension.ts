@@ -6,6 +6,7 @@ import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
 import { OC_GO_MODELS, DEFAULT_VISION_PROXY_MODEL } from "./types";
 import { availability, getConfigPath } from "./secretScan";
+import { secretScanLog, disposeChannel } from "./secretScanLog";
 
 // Global provider reference for API key management
 let _provider: OcGoChatModelProvider | null = null;
@@ -174,11 +175,21 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // Reveal the "OpenCode Go: Secret Scan" output channel. This gives
+  // users a single clickable way to see per-request scan history, the
+  // resolved gitleaks binary path, and any per-finding detail.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("opencode-go.showSecretScanLog", () => {
+      secretScanLog.reveal();
+    })
+  );
+
   console.log("[OpenCode Go Provider] Extension activated");
 }
 
 export function deactivate() {
   flushLog();
+  disposeChannel();
   console.log("[OpenCode Go Provider] Extension deactivated");
   _provider = null;
 }

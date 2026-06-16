@@ -71,6 +71,11 @@
         "command": "opencode-go.showSecretScanStatus",
         "title": "Show Secret Scan Status",
         "category": "OpenCode Go"
+      },
+      {
+        "command": "opencode-go.showSecretScanLog",
+        "title": "Show Secret Scan Log",
+        "category": "OpenCode Go"
       }
     ],
     "configuration": {

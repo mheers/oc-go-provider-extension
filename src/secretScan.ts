@@ -20,6 +20,7 @@ import { spawn } from "child_process";
 import type { ChildProcess } from "child_process";
 import { access, constants } from "fs/promises";
 import { debugLog } from "./logging";
+import { secretScanLog } from "./secretScanLog";
 
 /** A single secret finding emitted by gitleaks. */
 export interface SecretFinding {
@@ -91,19 +92,24 @@ export async function availability(
 
   _availabilityPromise = (async () => {
     const binary = resolveGitleaksPath();
+    const fromEnv =
+      (process.env["OPENCODEGO_GITLEAKS_PATH"] ?? "").trim().length > 0;
     if (binary.includes("/") || binary.includes("\\")) {
       try {
         await access(binary, constants.X_OK);
         _availabilityCache = "available";
+        secretScanLog.binaryResolved(binary, fromEnv);
         return "available";
       } catch {
         _availabilityCache = "missing";
+        secretScanLog.binaryResolved(binary, fromEnv);
         return "missing";
       }
     }
     // Bare name: try to spawn with `--version` and a short timeout.
     const ok = await canSpawn(binary, ["--version"], 1_000);
     _availabilityCache = ok ? "available" : "missing";
+    secretScanLog.binaryResolved(binary, fromEnv);
     return _availabilityCache;
   })();
   return _availabilityPromise;
@@ -177,25 +183,34 @@ export async function scanAndRedact(
   // path fast and avoids EPIPE noise on machines without gitleaks.
   const avail = options.availabilityOverride ?? (await availability());
   if (avail !== "available") {
+    // Either user disabled scanning (`disabled`) or the binary is not
+    // installed (`missing`). Both reduce to the same no-op behavior; we
+    // log once for visibility in the output channel.
+    secretScanLog.scanUnavailable("missing");
     return empty;
   }
 
   const binary = resolveGitleaksPath();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const t0 = Date.now();
   const stdout = await runGitleaks(binary, text, timeoutMs);
+  const duration = Date.now() - t0;
   if (stdout.length === 0) {
     return empty;
   }
 
   const findings = parseGitleaksJson(stdout);
   if (findings.length === 0) {
+    secretScanLog.scanClean(duration);
     return empty;
   }
 
   const redacted = applyRedactions(text, findings);
+  secretScanLog.scanRedacted(findings, duration);
   debugLog("SECRET-SCAN", {
     binary,
     findingCount: findings.length,
+    durationMs: duration,
     rules: Array.from(new Set(findings.map((f) => f.ruleId))),
   });
   return { redacted: redacted !== text, findings, text: redacted };
@@ -221,6 +236,7 @@ function runGitleaks(
     let stdout = "";
     let stdoutBytes = 0;
     let truncated = false;
+    let timedOut = false;
     let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
     const finish = (value: string): void => {
@@ -292,10 +308,14 @@ function runGitleaks(
     child.on("close", () => {
       // gitleaks sometimes exits non-zero when findings exist; with
       // --exit-code 0 this should always be 0, but be defensive.
+      if (timedOut) {
+        secretScanLog.scanUnavailable("timeout", `after ${timeoutMs}ms`);
+      }
       finish(truncated ? "" : stdout);
     });
 
     timer = setTimeout(() => {
+      timedOut = true;
       try {
         child.kill("SIGKILL");
       } catch {

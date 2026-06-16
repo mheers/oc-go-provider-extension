@@ -78,6 +78,9 @@ class OcGoStatusBar {
 
   private _updateText(): void {
     const parts: string[] = ["$(hubot) OC Go"];
+    if (this._lastScan && this._lastScan.findings.length > 0) {
+      parts.push(`$(shield) ${this._lastScan.findings.length}`);
+    }
     if (
       this._promptTokens !== undefined &&
       this._maxInputTokens !== undefined
@@ -103,6 +106,23 @@ class OcGoStatusBar {
       const rate =
         total > 0 ? Math.round((this._cumulativeCacheHit / total) * 100) : 0;
       lines.push(`Cache hit rate: ${rate}%`);
+    }
+    if (this._lastScan) {
+      const ts = new Date(this._lastScan.at).toLocaleString();
+      lines.push("");
+      lines.push("Secret scan");
+      lines.push(
+        `  Last: ${ts} (${this._lastScan.apiFormat}) — ` +
+          `${this._lastScan.findings.length} finding(s), ` +
+          (this._lastScan.redacted ? "redacted" : "passthrough")
+      );
+      const rules = Array.from(
+        new Set(this._lastScan.findings.map((f) => f.ruleId))
+      );
+      if (rules.length > 0) {
+        lines.push(`  Rules: ${rules.join(", ")}`);
+      }
+      lines.push('  Run "OpenCode Go: Show Secret Scan Log" for details.');
     }
     this._item.tooltip = lines.join("\n");
   }
