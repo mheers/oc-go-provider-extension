@@ -9,9 +9,12 @@ NPM_FLAGS ?=
 # VS Code Extension Manager (use npx if not installed globally)
 VSCE    ?= npx -y @vscode/vsce
 
+# VS Code CLI (overridable, e.g. `make reinstall CODE=code-insiders`)
+CODE    ?= code
+
 .PHONY: help all install compile watch test test-watch test-coverage \
         lint lint-fix format format-check clean package package-no-deps publish \
-        sync-models sync-models-apply
+        reinstall sync-models sync-models-apply
 
 .DEFAULT_GOAL := help
 
@@ -21,6 +24,21 @@ help: ## Show this help message
 # Central "do everything" target: install deps, lint, format, test, then build.
 # Stops on the first failure (each step depends on the previous).
 all: install lint format test compile ## Install, lint, format, test, and compile
+
+# "all" + package + install into VS Code in one shot.
+# Set CODE=code-insiders (or another launcher) to target a different editor.
+reinstall: all package ## Build, package, and (re)install the .vsix into VS Code
+	@VSIX=$$(ls -t opencode-go-vscode-chat-*.vsix 2>/dev/null | head -1); \
+	if [ -z "$$VSIX" ]; then \
+		echo "Error: no .vsix file found in $$PWD" >&2; \
+		exit 1; \
+	fi; \
+	if ! command -v $(CODE) >/dev/null 2>&1; then \
+		echo "Error: '$(CODE)' not found on PATH. Override with CODE=... or install the VS Code CLI." >&2; \
+		exit 1; \
+	fi; \
+	echo "==> Installing $$VSIX via $(CODE)"; \
+	$(CODE) --install-extension "$$VSIX" --force
 
 install: ## Install dependencies (also runs dts dev/main via postinstall)
 	$(NPM) install $(NPM_FLAGS)
