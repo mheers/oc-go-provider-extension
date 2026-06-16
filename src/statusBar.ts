@@ -26,7 +26,10 @@ class OcGoStatusBar {
   private _lastScan: SecretScanReport | undefined;
 
   constructor(context: vscode.ExtensionContext) {
-    this._item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    this._item = vscode.window.createStatusBarItem(
+      vscode.StatusBarAlignment.Right,
+      100
+    );
     this._item.command = "opencode-go.manage";
     this._item.text = "$(hubot) OC Go";
     this._item.tooltip = "OpenCode Go Provider";
@@ -75,11 +78,18 @@ class OcGoStatusBar {
 
   private _updateText(): void {
     const parts: string[] = ["$(hubot) OC Go"];
-    if (this._promptTokens !== undefined && this._maxInputTokens !== undefined) {
-      parts.push(`${this._fmt(this._promptTokens)}/${this._fmt(this._maxInputTokens)}`);
+    if (
+      this._promptTokens !== undefined &&
+      this._maxInputTokens !== undefined
+    ) {
+      parts.push(
+        `${this._fmt(this._promptTokens)}/${this._fmt(this._maxInputTokens)}`
+      );
     }
     if (this._cumulativeInput > 0 || this._cumulativeOutput > 0) {
-      parts.push(`${this._fmt(this._cumulativeInput)}in/${this._fmt(this._cumulativeOutput)}out`);
+      parts.push(
+        `${this._fmt(this._cumulativeInput)}in/${this._fmt(this._cumulativeOutput)}out`
+      );
     }
     this._item.text = parts.join(" ");
   }
@@ -90,7 +100,8 @@ class OcGoStatusBar {
     lines.push(`Output: ${this._fmt(this._cumulativeOutput)}`);
     if (this._cumulativeCacheHit > 0 || this._cumulativeCacheMiss > 0) {
       const total = this._cumulativeCacheHit + this._cumulativeCacheMiss;
-      const rate = total > 0 ? Math.round((this._cumulativeCacheHit / total) * 100) : 0;
+      const rate =
+        total > 0 ? Math.round((this._cumulativeCacheHit / total) * 100) : 0;
       lines.push(`Cache hit rate: ${rate}%`);
     }
     this._item.tooltip = lines.join("\n");

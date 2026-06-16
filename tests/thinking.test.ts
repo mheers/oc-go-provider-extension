@@ -21,14 +21,18 @@ describe("thinking module", () => {
       const schema = getThinkingSchemaForModel("deepseek-v4-pro");
       expect(schema).not.toBeNull();
       expect(schema!.properties.thinking_effort).toBeDefined();
-      expect((schema!.properties.thinking_effort as { enum: string[] }).enum).toEqual(["max", "high", "none"]);
+      expect(
+        (schema!.properties.thinking_effort as { enum: string[] }).enum
+      ).toEqual(["max", "high", "none"]);
     });
 
     it("returns schema for MiMo models", () => {
       const schema = getThinkingSchemaForModel("mimo-v2-pro");
       expect(schema).not.toBeNull();
       expect(schema!.properties.thinking_effort).toBeDefined();
-      expect((schema!.properties.thinking_effort as { enum: string[] }).enum).toEqual(["on", "off"]);
+      expect(
+        (schema!.properties.thinking_effort as { enum: string[] }).enum
+      ).toEqual(["on", "off"]);
     });
 
     it("returns schema for Qwen models", () => {

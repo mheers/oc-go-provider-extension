@@ -20,3 +20,10 @@ coverage/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Auto-generated VS Code API typings (downloaded by `dts dev` / `dts main`)
+vscode.d.ts
+vscode.proposed.chatProvider.d.ts
+
+# package.json fields (version, etc.) are managed by `npm version`
+package.json

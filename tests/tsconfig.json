@@ -1,10 +1,7 @@
 {
-    "extends": "../tsconfig.test.json",
-    "compilerOptions": {
-        "rootDir": ".."
-    },
-    "include": [
-        "**/*.ts",
-        "../__mocks__/**/*.ts"
-    ]
+  "extends": "../tsconfig.test.json",
+  "compilerOptions": {
+    "rootDir": ".."
+  },
+  "include": ["**/*.ts", "../__mocks__/**/*.ts"]
 }

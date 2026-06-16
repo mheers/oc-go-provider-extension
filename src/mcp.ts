@@ -29,12 +29,20 @@ export class OcGoMcpClient {
    * @param prompt What to analyze in the image
    * @returns Image analysis result
    */
-  async analyzeImage(imageData: string, prompt: string, proxyModelId: string = DEFAULT_VISION_PROXY_MODEL): Promise<string> {
+  async analyzeImage(
+    imageData: string,
+    prompt: string,
+    proxyModelId: string = DEFAULT_VISION_PROXY_MODEL
+  ): Promise<string> {
     if (!(await this.ensureApiKey())) {
       throw new Error("OpenCode Go API key not found");
     }
 
-    debugLog("OCR-CALL", { model: proxyModelId, imageDataLength: imageData.length, promptLength: prompt.length });
+    debugLog("OCR-CALL", {
+      model: proxyModelId,
+      imageDataLength: imageData.length,
+      promptLength: prompt.length,
+    });
 
     // Call Vision model via chat completions endpoint
     const response = await fetch(

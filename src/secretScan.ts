@@ -23,29 +23,29 @@ import { debugLog } from "./logging";
 
 /** A single secret finding emitted by gitleaks. */
 export interface SecretFinding {
-    /** gitleaks rule id (e.g. `aws-access-token`). */
-    ruleId: string;
-    /** The exact secret string as it appeared in the input. */
-    secret: string;
-    /** Redacted replacement applied to the input. */
-    redacted: string;
+  /** gitleaks rule id (e.g. `aws-access-token`). */
+  ruleId: string;
+  /** The exact secret string as it appeared in the input. */
+  secret: string;
+  /** Redacted replacement applied to the input. */
+  redacted: string;
 }
 
 /** Result of scanning a chunk of text. */
 export interface ScanResult {
-    /** True if at least one finding was redacted. */
-    redacted: boolean;
-    /** All findings, in order of detection. */
-    findings: SecretFinding[];
-    /** The text with secrets replaced by their `redacted` form. */
-    text: string;
+  /** True if at least one finding was redacted. */
+  redacted: boolean;
+  /** All findings, in order of detection. */
+  findings: SecretFinding[];
+  /** The text with secrets replaced by their `redacted` form. */
+  text: string;
 }
 
 /** Status of the gitleaks binary in the current environment. */
 export type ScannerAvailability =
-    | "available"
-    | "missing"
-    | "disabled" /* user turned scanning off */;
+  | "available"
+  | "missing"
+  | "disabled" /* user turned scanning off */;
 
 /** Scanner action as configured by the user. */
 export type ScannerAction = "off" | "redact";
@@ -60,11 +60,11 @@ const MAX_OUTPUT_BYTES = 4 * 1024 * 1024; // 4 MB cap on gitleaks output
  * defaults to `gitleaks` (resolved via $PATH).
  */
 function resolveGitleaksPath(): string {
-    const configured = process.env["OPENCODEGO_GITLEAKS_PATH"] ?? "";
-    if (configured.trim().length > 0) {
-        return configured.trim();
-    }
-    return "gitleaks";
+  const configured = process.env["OPENCODEGO_GITLEAKS_PATH"] ?? "";
+  if (configured.trim().length > 0) {
+    return configured.trim();
+  }
+  return "gitleaks";
 }
 
 /**
@@ -79,80 +79,80 @@ let _availabilityCache: ScannerAvailability | undefined;
 let _availabilityPromise: Promise<ScannerAvailability> | undefined;
 
 export function getConfigPath(): string {
-    return resolveGitleaksPath();
+  return resolveGitleaksPath();
 }
 
 export async function availability(
-    action: ScannerAction = "redact"
+  action: ScannerAction = "redact"
 ): Promise<ScannerAvailability> {
-    if (action === "off") return "disabled";
-    if (_availabilityCache !== undefined) return _availabilityCache;
-    if (_availabilityPromise !== undefined) return _availabilityPromise;
+  if (action === "off") return "disabled";
+  if (_availabilityCache !== undefined) return _availabilityCache;
+  if (_availabilityPromise !== undefined) return _availabilityPromise;
 
-    _availabilityPromise = (async () => {
-        const binary = resolveGitleaksPath();
-        if (binary.includes("/") || binary.includes("\\")) {
-            try {
-                await access(binary, constants.X_OK);
-                _availabilityCache = "available";
-                return "available";
-            } catch {
-                _availabilityCache = "missing";
-                return "missing";
-            }
-        }
-        // Bare name: try to spawn with `--version` and a short timeout.
-        const ok = await canSpawn(binary, ["--version"], 1_000);
-        _availabilityCache = ok ? "available" : "missing";
-        return _availabilityCache;
-    })();
-    return _availabilityPromise;
+  _availabilityPromise = (async () => {
+    const binary = resolveGitleaksPath();
+    if (binary.includes("/") || binary.includes("\\")) {
+      try {
+        await access(binary, constants.X_OK);
+        _availabilityCache = "available";
+        return "available";
+      } catch {
+        _availabilityCache = "missing";
+        return "missing";
+      }
+    }
+    // Bare name: try to spawn with `--version` and a short timeout.
+    const ok = await canSpawn(binary, ["--version"], 1_000);
+    _availabilityCache = ok ? "available" : "missing";
+    return _availabilityCache;
+  })();
+  return _availabilityPromise;
 }
 
 /** Test/utility hook to reset the availability cache between runs. */
 export function _resetAvailabilityCache(): void {
-    _availabilityCache = undefined;
-    _availabilityPromise = undefined;
+  _availabilityCache = undefined;
+  _availabilityPromise = undefined;
 }
 
 function canSpawn(
-    binary: string,
-    args: string[],
-    timeoutMs: number
+  binary: string,
+  args: string[],
+  timeoutMs: number
 ): Promise<boolean> {
-    return new Promise((resolve) => {
-        let settled = false;
-        let timer: ReturnType<typeof setTimeout> | undefined;
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const child = spawn(binary, args, { stdio: "ignore" });
+      child.on("error", () => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(false);
+      });
+      child.on("close", (code) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(code === 0);
+      });
+      timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         try {
-            const child = spawn(binary, args, { stdio: "ignore" });
-            child.on("error", () => {
-                if (settled) return;
-                settled = true;
-                if (timer) clearTimeout(timer);
-                resolve(false);
-            });
-            child.on("close", (code) => {
-                if (settled) return;
-                settled = true;
-                if (timer) clearTimeout(timer);
-                resolve(code === 0);
-            });
-            timer = setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                try {
-                    child.kill("SIGKILL");
-                } catch {
-                    /* ignore */
-                }
-                resolve(false);
-            }, timeoutMs);
-            timer.unref();
+          child.kill("SIGKILL");
         } catch {
-            if (timer) clearTimeout(timer);
-            resolve(false);
+          /* ignore */
         }
-    });
+        resolve(false);
+      }, timeoutMs);
+      timer.unref();
+    } catch {
+      if (timer) clearTimeout(timer);
+      resolve(false);
+    }
+  });
 }
 
 /**
@@ -164,226 +164,230 @@ function canSpawn(
  * `availability()` separately if they want to surface the status.
  */
 export async function scanAndRedact(
-    text: string,
-    options: { timeoutMs?: number; availabilityOverride?: ScannerAvailability } = {}
+  text: string,
+  options: {
+    timeoutMs?: number;
+    availabilityOverride?: ScannerAvailability;
+  } = {}
 ): Promise<ScanResult> {
-    const empty: ScanResult = { redacted: false, findings: [], text };
-    if (!text) return empty;
+  const empty: ScanResult = { redacted: false, findings: [], text };
+  if (!text) return empty;
 
-    // Skip spawning if the binary is not available. This keeps the request
-    // path fast and avoids EPIPE noise on machines without gitleaks.
-    const avail =
-        options.availabilityOverride ?? (await availability());
-    if (avail !== "available") {
-        return empty;
-    }
+  // Skip spawning if the binary is not available. This keeps the request
+  // path fast and avoids EPIPE noise on machines without gitleaks.
+  const avail = options.availabilityOverride ?? (await availability());
+  if (avail !== "available") {
+    return empty;
+  }
 
-    const binary = resolveGitleaksPath();
-    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    const stdout = await runGitleaks(binary, text, timeoutMs);
-    if (stdout.length === 0) {
-        return empty;
-    }
+  const binary = resolveGitleaksPath();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const stdout = await runGitleaks(binary, text, timeoutMs);
+  if (stdout.length === 0) {
+    return empty;
+  }
 
-    const findings = parseGitleaksJson(stdout);
-    if (findings.length === 0) {
-        return empty;
-    }
+  const findings = parseGitleaksJson(stdout);
+  if (findings.length === 0) {
+    return empty;
+  }
 
-    const redacted = applyRedactions(text, findings);
-    debugLog("SECRET-SCAN", {
-        binary,
-        findingCount: findings.length,
-        rules: Array.from(new Set(findings.map((f) => f.ruleId))),
-    });
-    return { redacted: redacted !== text, findings, text: redacted };
+  const redacted = applyRedactions(text, findings);
+  debugLog("SECRET-SCAN", {
+    binary,
+    findingCount: findings.length,
+    rules: Array.from(new Set(findings.map((f) => f.ruleId))),
+  });
+  return { redacted: redacted !== text, findings, text: redacted };
 }
 
 interface RawGitleaksFinding {
-    RuleID?: string;
-    Description?: string;
-    Match?: string;
-    Secret?: string;
-    File?: string;
-    Line?: number;
-    // Some versions emit "Match" only and not "Secret"
+  RuleID?: string;
+  Description?: string;
+  Match?: string;
+  Secret?: string;
+  File?: string;
+  Line?: number;
+  // Some versions emit "Match" only and not "Secret"
 }
 
 function runGitleaks(
-    binary: string,
-    input: string,
-    timeoutMs: number
+  binary: string,
+  input: string,
+  timeoutMs: number
 ): Promise<string> {
-    return new Promise((resolve) => {
-        let settled = false;
-        let stdout = "";
-        let stdoutBytes = 0;
-        let truncated = false;
-        let timer: ReturnType<typeof setTimeout> | undefined = undefined;
+  return new Promise((resolve) => {
+    let settled = false;
+    let stdout = "";
+    let stdoutBytes = 0;
+    let truncated = false;
+    let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
-        const finish = (value: string): void => {
-            if (settled) return;
-            settled = true;
-            if (timer) clearTimeout(timer);
-            resolve(value);
-        };
+    const finish = (value: string): void => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(value);
+    };
 
-        let child: ChildProcess;
-        try {
-            child = spawn(
-                binary,
-                [
-                    "detect",
-                    "--no-git",
-                    "--no-banner",
-                    "--stdin",
-                    "--report-format",
-                    "json",
-                    "--exit-code",
-                    "0", // never fail the request even if findings exist
-                    "--redact",
-                    "0", // we'll do our own redaction so we can label with rule id
-                    "-",
-                ],
-                { stdio: ["pipe", "pipe", "pipe"] }
-            );
-        } catch (err) {
-            debugLog("SECRET-SCAN-SPAWN-ERROR", {
-                binary,
-                error: err instanceof Error ? err.message : String(err),
-            });
-            finish("");
-            return;
-        }
+    let child: ChildProcess;
+    try {
+      child = spawn(
+        binary,
+        [
+          "detect",
+          "--no-git",
+          "--no-banner",
+          "--stdin",
+          "--report-format",
+          "json",
+          "--exit-code",
+          "0", // never fail the request even if findings exist
+          "--redact",
+          "0", // we'll do our own redaction so we can label with rule id
+          "-",
+        ],
+        { stdio: ["pipe", "pipe", "pipe"] }
+      );
+    } catch (err) {
+      debugLog("SECRET-SCAN-SPAWN-ERROR", {
+        binary,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      finish("");
+      return;
+    }
 
-        // @types/node marks stdout/stderr/stdin on ChildProcess as nullable
-        // for stdio: "inherit" callers. We forced stdio: ["pipe", ...] above
-        // so they are guaranteed non-null at runtime.
-        const stdoutStream = child.stdout;
-        const stderrStream = child.stderr;
-        const stdinStream = child.stdin;
-        if (!stdoutStream || !stderrStream || !stdinStream) {
-            finish("");
-            return;
-        }
+    // @types/node marks stdout/stderr/stdin on ChildProcess as nullable
+    // for stdio: "inherit" callers. We forced stdio: ["pipe", ...] above
+    // so they are guaranteed non-null at runtime.
+    const stdoutStream = child.stdout;
+    const stderrStream = child.stderr;
+    const stdinStream = child.stdin;
+    if (!stdoutStream || !stderrStream || !stdinStream) {
+      finish("");
+      return;
+    }
 
-        stdoutStream.setEncoding("utf8");
-        stdoutStream.on("data", (chunk: string) => {
-            if (truncated) return;
-            stdoutBytes += Buffer.byteLength(chunk, "utf8");
-            if (stdoutBytes > MAX_OUTPUT_BYTES) {
-                truncated = true;
-                return;
-            }
-            stdout += chunk;
-        });
-        stderrStream.setEncoding("utf8");
-        stderrStream.on("data", () => {
-            /* gitleaks writes findings to stdout, not stderr */
-        });
-        // Swallow stdin errors (e.g. EPIPE if gitleaks closes early on
-        // pathological input). The write callback below handles the
-        // error path; without an 'error' listener the process would
-        // crash with an unhandled exception.
-        stdinStream.on("error", () => finish(""));
-        child.on("error", () => finish(""));
-        child.on("close", () => {
-            // gitleaks sometimes exits non-zero when findings exist; with
-            // --exit-code 0 this should always be 0, but be defensive.
-            finish(truncated ? "" : stdout);
-        });
-
-        timer = setTimeout(() => {
-            try {
-                child.kill("SIGKILL");
-            } catch {
-                /* ignore */
-            }
-            finish("");
-        }, timeoutMs);
-        timer.unref();
-
-        try {
-            stdinStream.write(input, "utf8", (err) => {
-                if (err) {
-                    try {
-                        child.kill("SIGKILL");
-                    } catch {
-                        /* ignore */
-                    }
-                    finish("");
-                }
-            });
-            stdinStream.end();
-        } catch {
-            try {
-                child.kill("SIGKILL");
-            } catch {
-                /* ignore */
-            }
-            finish("");
-        }
+    stdoutStream.setEncoding("utf8");
+    stdoutStream.on("data", (chunk: string) => {
+      if (truncated) return;
+      stdoutBytes += Buffer.byteLength(chunk, "utf8");
+      if (stdoutBytes > MAX_OUTPUT_BYTES) {
+        truncated = true;
+        return;
+      }
+      stdout += chunk;
     });
+    stderrStream.setEncoding("utf8");
+    stderrStream.on("data", () => {
+      /* gitleaks writes findings to stdout, not stderr */
+    });
+    // Swallow stdin errors (e.g. EPIPE if gitleaks closes early on
+    // pathological input). The write callback below handles the
+    // error path; without an 'error' listener the process would
+    // crash with an unhandled exception.
+    stdinStream.on("error", () => finish(""));
+    child.on("error", () => finish(""));
+    child.on("close", () => {
+      // gitleaks sometimes exits non-zero when findings exist; with
+      // --exit-code 0 this should always be 0, but be defensive.
+      finish(truncated ? "" : stdout);
+    });
+
+    timer = setTimeout(() => {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* ignore */
+      }
+      finish("");
+    }, timeoutMs);
+    timer.unref();
+
+    try {
+      stdinStream.write(input, "utf8", (err) => {
+        if (err) {
+          try {
+            child.kill("SIGKILL");
+          } catch {
+            /* ignore */
+          }
+          finish("");
+        }
+      });
+      stdinStream.end();
+    } catch {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* ignore */
+      }
+      finish("");
+    }
+  });
 }
 
 function parseGitleaksJson(raw: string): SecretFinding[] {
-    const findings: SecretFinding[] = [];
-    const trimmed = raw.trim();
-    if (!trimmed) return findings;
+  const findings: SecretFinding[] = [];
+  const trimmed = raw.trim();
+  if (!trimmed) return findings;
 
-    // gitleaks may emit a single JSON object (one finding) or an array of
-    // findings; tolerate both.
-    let parsed: unknown;
+  // gitleaks may emit a single JSON object (one finding) or an array of
+  // findings; tolerate both.
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    // Some gitleaks versions emit a JSON array with a trailing newline
+    // followed by a status line; try the first JSON-ish prefix.
+    const arrayEnd = trimmed.lastIndexOf("]");
+    const objectEnd = trimmed.lastIndexOf("}");
+    const cut = Math.max(arrayEnd, objectEnd);
+    if (cut <= 0) return findings;
     try {
-        parsed = JSON.parse(trimmed);
+      parsed = JSON.parse(trimmed.slice(0, cut + 1));
     } catch {
-        // Some gitleaks versions emit a JSON array with a trailing newline
-        // followed by a status line; try the first JSON-ish prefix.
-        const arrayEnd = trimmed.lastIndexOf("]");
-        const objectEnd = trimmed.lastIndexOf("}");
-        const cut = Math.max(arrayEnd, objectEnd);
-        if (cut <= 0) return findings;
-        try {
-            parsed = JSON.parse(trimmed.slice(0, cut + 1));
-        } catch {
-            return findings;
-        }
+      return findings;
     }
+  }
 
-    const items: RawGitleaksFinding[] = Array.isArray(parsed)
-        ? (parsed as RawGitleaksFinding[])
-        : parsed
-            ? [parsed as RawGitleaksFinding]
-            : [];
-    for (const item of items) {
-        const ruleId = typeof item.RuleID === "string" ? item.RuleID : "";
-        const secret =
-            typeof item.Secret === "string"
-                ? item.Secret
-                : typeof item.Match === "string"
-                    ? item.Match
-                    : "";
-        if (!ruleId || !secret) continue;
-        findings.push({
-            ruleId,
-            secret,
-            redacted: `[REDACTED:${ruleId}]`,
-        });
-    }
-    return findings;
+  const items: RawGitleaksFinding[] = Array.isArray(parsed)
+    ? (parsed as RawGitleaksFinding[])
+    : parsed
+      ? [parsed as RawGitleaksFinding]
+      : [];
+  for (const item of items) {
+    const ruleId = typeof item.RuleID === "string" ? item.RuleID : "";
+    const secret =
+      typeof item.Secret === "string"
+        ? item.Secret
+        : typeof item.Match === "string"
+          ? item.Match
+          : "";
+    if (!ruleId || !secret) continue;
+    findings.push({
+      ruleId,
+      secret,
+      redacted: `[REDACTED:${ruleId}]`,
+    });
+  }
+  return findings;
 }
 
 function applyRedactions(text: string, findings: SecretFinding[]): string {
-    // Apply longest secrets first to avoid prefix collisions (e.g. an
-    // aws-access-token being a substring of a longer match).
-    const ordered = [...findings].sort((a, b) => b.secret.length - a.secret.length);
-    let out = text;
-    const seen = new Set<string>();
-    for (const f of ordered) {
-        if (seen.has(f.secret)) continue;
-        seen.add(f.secret);
-        if (!f.secret) continue;
-        out = out.split(f.secret).join(f.redacted);
-    }
-    return out;
+  // Apply longest secrets first to avoid prefix collisions (e.g. an
+  // aws-access-token being a substring of a longer match).
+  const ordered = [...findings].sort(
+    (a, b) => b.secret.length - a.secret.length
+  );
+  let out = text;
+  const seen = new Set<string>();
+  for (const f of ordered) {
+    if (seen.has(f.secret)) continue;
+    seen.add(f.secret);
+    if (!f.secret) continue;
+    out = out.split(f.secret).join(f.redacted);
+  }
+  return out;
 }

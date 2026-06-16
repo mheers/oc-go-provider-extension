@@ -36,7 +36,10 @@ export class OcGoAnalyzeImageTool implements vscode.LanguageModelTool<{
 
   private readonly _mcpClient: OcGoMcpClient;
 
-  constructor(secrets: vscode.SecretStorage, private readonly visionModelId: string = DEFAULT_VISION_PROXY_MODEL) {
+  constructor(
+    secrets: vscode.SecretStorage,
+    private readonly visionModelId: string = DEFAULT_VISION_PROXY_MODEL
+  ) {
     this._mcpClient = new OcGoMcpClient(secrets);
   }
 
@@ -50,7 +53,11 @@ export class OcGoAnalyzeImageTool implements vscode.LanguageModelTool<{
     const { image_data, prompt } = options.input;
 
     try {
-      const result = await this._mcpClient.analyzeImage(image_data, prompt, this.visionModelId);
+      const result = await this._mcpClient.analyzeImage(
+        image_data,
+        prompt,
+        this.visionModelId
+      );
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(result),
       ]);

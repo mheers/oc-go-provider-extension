@@ -4,13 +4,8 @@
     "target": "ES2020",
     "rootDir": "src",
     "outDir": "out",
-    "lib": [
-      "ES2020",
-      "DOM"
-    ],
-    "types": [
-      "node"
-    ],
+    "lib": ["ES2020", "DOM"],
+    "types": ["node"],
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true,
@@ -18,15 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts",
-    "*.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "out",
-    "__mocks__",
-    ".vscode-test",
-    "tests"
-  ]
+  "include": ["src/**/*.ts", "*.d.ts"],
+  "exclude": ["node_modules", "out", "__mocks__", ".vscode-test", "tests"]
 }

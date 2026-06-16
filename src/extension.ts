@@ -83,31 +83,34 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Vision proxy model selection command
   context.subscriptions.push(
-    vscode.commands.registerCommand("opencode-go.selectVisionProxy", async () => {
-      const visionModels = OC_GO_MODELS.filter((m) => m.supportsVision);
-      const current = vscode.workspace
-        .getConfiguration("opencodego")
-        .get<string>("visionProxyModel", DEFAULT_VISION_PROXY_MODEL);
-      const items = visionModels.map((m) => ({
-        label: m.displayName,
-        description: m.id === current ? "$(check) Current" : m.id,
-        modelId: m.id,
-      }));
-      const picked = await vscode.window.showQuickPick(items, {
-        placeHolder: "Select vision proxy model for OCR",
-      });
-      if (picked) {
-        const config = vscode.workspace.getConfiguration("opencodego");
-        await config.update(
-          "visionProxyModel",
-          picked.modelId,
-          vscode.ConfigurationTarget.Global
-        );
-        vscode.window.showInformationMessage(
-          `Vision proxy set to ${picked.label}`
-        );
+    vscode.commands.registerCommand(
+      "opencode-go.selectVisionProxy",
+      async () => {
+        const visionModels = OC_GO_MODELS.filter((m) => m.supportsVision);
+        const current = vscode.workspace
+          .getConfiguration("opencodego")
+          .get<string>("visionProxyModel", DEFAULT_VISION_PROXY_MODEL);
+        const items = visionModels.map((m) => ({
+          label: m.displayName,
+          description: m.id === current ? "$(check) Current" : m.id,
+          modelId: m.id,
+        }));
+        const picked = await vscode.window.showQuickPick(items, {
+          placeHolder: "Select vision proxy model for OCR",
+        });
+        if (picked) {
+          const config = vscode.workspace.getConfiguration("opencodego");
+          await config.update(
+            "visionProxyModel",
+            picked.modelId,
+            vscode.ConfigurationTarget.Global
+          );
+          vscode.window.showInformationMessage(
+            `Vision proxy set to ${picked.label}`
+          );
+        }
       }
-    })
+    )
   );
 
   // Listen for vision proxy configuration changes
@@ -131,9 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
           .getConfiguration("opencodego")
           .get<string>("secretScan", "redact");
         const path = getConfigPath();
-        const avail = await availability(
-          action === "off" ? "off" : "redact"
-        );
+        const avail = await availability(action === "off" ? "off" : "redact");
         const last = statusBarGetLastScan();
         const lines: string[] = [];
         lines.push(`Action: ${action}`);

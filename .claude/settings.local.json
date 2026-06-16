@@ -1,7 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "mcp__web-search-prime__webSearchPrime"
-    ]
+    "allow": ["mcp__web-search-prime__webSearchPrime"]
   }
 }

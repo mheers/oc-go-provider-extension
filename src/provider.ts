@@ -143,11 +143,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
   /** Active text-embedded tool call being assembled */
   private _textToolActive:
     | {
-      name?: string;
-      index?: number;
-      argBuffer: string;
-      emitted?: boolean;
-    }
+        name?: string;
+        index?: number;
+        argBuffer: string;
+        emitted?: boolean;
+      }
     | undefined;
 
   /** Deduplicate tool calls parsed from text and structured deltas */
@@ -161,11 +161,11 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     cache_hit_tokens: number;
     cache_miss_tokens: number;
   } = {
-      prompt_tokens: 0,
-      completion_tokens: 0,
-      cache_hit_tokens: 0,
-      cache_miss_tokens: 0,
-    };
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    cache_hit_tokens: 0,
+    cache_miss_tokens: 0,
+  };
 
   /** OCR image deduplication cache: hash -> OCR description */
   private _ocrImageState = new Map<string, string>();
@@ -1081,8 +1081,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     text:
       | string
       | {
-        content: readonly unknown[];
-      },
+          content: readonly unknown[];
+        },
     _token: CancellationToken
   ): Promise<number> {
     if (typeof text === "string") {
@@ -1322,7 +1322,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       // Use LanguageModelThinkingPart on VS Code 1.120+, fallback to DataPart
       const ThinkingPart = (vscode as unknown as Record<string, unknown>)
         .LanguageModelThinkingPart as
-        | { new(value: string): LanguageModelResponsePart }
+        | { new (value: string): LanguageModelResponsePart }
         | undefined;
       if (ThinkingPart) {
         progress.report(new ThinkingPart(this._reasoningContentBuffer));

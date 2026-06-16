@@ -6,7 +6,7 @@ export interface ThinkingSchema {
   type: "object";
   properties: Record<
     string,
-    Record<string, any> & {
+    Record<string, unknown> & {
       readonly enumItemLabels?: string[];
       readonly group?: string;
     }
@@ -17,9 +17,7 @@ interface FamilyConfig {
   /** Schema enum values (display order) */
   levels: string[];
   /** Map level → API request parameters */
-  getParams: (
-    level: string
-  ) => Record<string, unknown> | null;
+  getParams: (level: string) => Record<string, unknown> | null;
   /** Suffix used for stable-API variant model IDs */
   suffix: string;
 }
@@ -99,9 +97,7 @@ const FAMILIES: Record<string, FamilyConfig> = {
 };
 
 function getFamilyKey(modelId: string): string | undefined {
-  const keys = Object.keys(FAMILIES).sort(
-    (a, b) => b.length - a.length
-  );
+  const keys = Object.keys(FAMILIES).sort((a, b) => b.length - a.length);
   return keys.find((k) => modelId.startsWith(k));
 }
 
@@ -140,9 +136,10 @@ export function getThinkingParams(
   return FAMILIES[key].getParams(effort);
 }
 
-export function parseVariantModelId(
-  modelId: string
-): { baseId: string; level?: string } {
+export function parseVariantModelId(modelId: string): {
+  baseId: string;
+  level?: string;
+} {
   for (const [key, family] of Object.entries(FAMILIES)) {
     const suffix = `-${family.suffix}`;
     if (modelId.endsWith(suffix)) {
@@ -159,9 +156,7 @@ export function parseVariantModelId(
   return { baseId: modelId };
 }
 
-export function createModelVariants(
-  model: OcGoModelInfo
-): OcGoModelInfo[] {
+export function createModelVariants(model: OcGoModelInfo): OcGoModelInfo[] {
   if (model.thinkingMode !== "switchable") return [];
   const key = getFamilyKey(model.id);
   if (!key) return [];

@@ -40,10 +40,7 @@ function ensureTimer(): void {
   flushTimer.unref();
 }
 
-export function debugLog(
-  msg: string,
-  data?: Record<string, unknown>
-): void {
+export function debugLog(msg: string, data?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();
   const line = data
     ? `[${timestamp}] ${msg} ${JSON.stringify(data)}\n`
