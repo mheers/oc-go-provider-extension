@@ -909,3 +909,125 @@ export function estimateMessagesTokens(
   }
   return total;
 }
+
+// ============================================================================
+// Redaction hint injection
+//
+// When the outbound secret scanner replaces a secret with a
+// `[REDACTED:<rule>]` placeholder, the LLM may try to "decode" the
+// placeholder, ask the user for the underlying value, or treat the
+// placeholder as a malformed token and refuse to answer. To prevent
+// this we append a short, idempotent hint to the request body the
+// first time redactions appear in a conversation, telling the LLM
+// that the placeholders are intentional and can be ignored.
+//
+// The hint is:
+//   * very short (a single sentence, ~25 tokens) so it does not
+//     noticeably bloat the prompt;
+//   * framed as guidance, not as a top-level metadata field, so the
+//     LLM applies it like any other system instruction;
+//   * idempotent — subsequent turns of the same conversation will
+//     not re-add it, even if more redactions appear, because we
+//     detect the marker text and bail out.
+// ============================================================================
+
+/**
+ * Stable substring that identifies the redaction hint. Used by both
+ * injectors and by tests to assert presence/absence. Must be a
+ * substring of {@link REDACTION_HINT_TEXT} so the idempotency check
+ * works.
+ */
+export const REDACTION_HINT_MARKER = "[REDACTED:*] placeholders are intentional";
+
+/**
+ * The full hint text. Kept as short as we could make it while still
+ * saying the three things the LLM needs: (1) what a `[REDACTED:*]`
+ * placeholder is, (2) it is intentional, (3) ignore it.
+ */
+export const REDACTION_HINT_TEXT =
+  "Note: [REDACTED:*] placeholders are intentional redactions of secrets. Ignore them — do not ask for, infer, or reveal the underlying values.";
+
+/**
+ * Inject the redaction hint into an OpenAI-format request body.
+ *
+ * Prepends a `role: "system"` message at the start of `messages`. If
+ * the hint is already present (typical for the second-and-later turns
+ * of a multi-turn conversation) the body is returned unchanged.
+ *
+ * No-op when `redacted` is false: we don't want to add noise to
+ * every request, only to the ones where redactions actually
+ * happened.
+ */
+export function injectRedactionHintForOpenAI(
+  body: JsonObject,
+  redacted: boolean
+): JsonObject {
+  if (!redacted) return body;
+  const messages = body["messages"];
+  if (!Array.isArray(messages)) return body;
+
+  // Idempotency: scan existing system messages for the marker. If
+  // present, do not stack a second copy.
+  for (const m of messages) {
+    if (m && typeof m === "object" && (m as JsonObject)["role"] === "system") {
+      const content = (m as JsonObject)["content"];
+      if (typeof content === "string" && content.includes(REDACTION_HINT_MARKER)) {
+        return body;
+      }
+    }
+  }
+
+  const hintMessage: JsonObject = {
+    role: "system",
+    content: REDACTION_HINT_TEXT,
+  };
+  return {
+    ...body,
+    messages: [hintMessage, ...messages],
+  };
+}
+
+/**
+ * Inject the redaction hint into an Anthropic-format request body.
+ *
+ * Anthropic puts the system prompt in a top-level `system` field that
+ * is either a `string` or an array of `{ type: "text", text: string }`
+ * blocks. We handle both shapes, and — like the OpenAI injector —
+ * bail out early when the hint is already present.
+ */
+export function injectRedactionHintForAnthropic(
+  body: JsonObject,
+  redacted: boolean
+): JsonObject {
+  if (!redacted) return body;
+  const system = body["system"];
+  if (typeof system === "string") {
+    if (system.includes(REDACTION_HINT_MARKER)) return body;
+    return { ...body, system: `${REDACTION_HINT_TEXT}\n\n${system}` };
+  }
+  if (Array.isArray(system)) {
+    for (const block of system) {
+      if (
+        block &&
+        typeof block === "object" &&
+        (block as JsonObject)["type"] === "text" &&
+        typeof (block as JsonObject)["text"] === "string" &&
+        ((block as JsonObject)["text"] as string).includes(
+          REDACTION_HINT_MARKER
+        )
+      ) {
+        return body;
+      }
+    }
+    return {
+      ...body,
+      system: [
+        { type: "text", text: REDACTION_HINT_TEXT },
+        ...(system as JsonObject[]),
+      ],
+    };
+  }
+  // No system field yet — create one with the hint. The Anthropic
+  // API accepts a bare string here.
+  return { ...body, system: REDACTION_HINT_TEXT };
+}

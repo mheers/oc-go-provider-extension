@@ -23,9 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Pluggable secret scanner** with [trufflehog](https://github.com/trufflesecurity/trufflehog) as the new default. TruffleHog's detector corpus (~800 detectors, entropy-aware) is substantially larger and more actively maintained than gitleaks'. Verification is off by default (`--no-verification`) so the chat path never makes network calls. New setting `opencodego.secretScanner` (`"trufflehog"` | `"gitleaks"`, default `"trufflehog"`) selects the backend; `opencodego.trufflehogPath` overrides the binary path. The previous `opencodego.gitleaksPath` setting is preserved. Internal refactor: secret scanning is now a `src/scanners/` module with a `Scanner` interface and a registry; adding a new backend is one new file in that directory.
 
+- **LLM-friendly hint when secrets are redacted.** When the outbound scanner replaces a secret with `[REDACTED:<rule>]`, the model previously saw a bare placeholder and often tried to "decode" it or asked the user for the original value. The extension now appends a single short system message (OpenAI format) or prepends to the top-level `system` field (Anthropic format) telling the LLM that the placeholders are intentional redactions and should be ignored. The hint is idempotent across multi-turn conversations and only injected on the first redacted turn; clean runs are not annotated. Helper: `injectRedactionHintForOpenAI` / `injectRedactionHintForAnthropic` in `src/utils.ts`.
+
 ### Changed
 
 - Status bar is now a real quick-pick menu. Clicking it (or running "OpenCode Go: Manage OpenCode Go Provider") opens a menu with: set/update/clear the API key, select the vision proxy model, view secret scan status and log, and jump to OpenCode Go settings. The previous "enter the API key" input box is now reached via the "Set/Update API Key…" menu item.
+
+- `redactRequestBody` in `src/provider.ts` now returns `{ body, redacted }` (a `RedactedRequestBody` object) instead of a bare `Json`, so callers can decide whether to inject the redaction hint without re-parsing the response.
 
 ## [0.7.0] - 2026-05-19
 

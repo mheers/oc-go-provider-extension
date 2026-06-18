@@ -101,7 +101,7 @@
             "redact"
           ],
           "default": "redact",
-          "markdownDescription": "Scan outbound chat requests for secrets (API keys, tokens, etc.) before sending them to the LLM. `redact` runs the configured scanner (see `opencodego.secretScanner`); `off` short-circuits the scan. Detected secrets are replaced with `[REDACTED:<rule-id>]`. If the configured scanner is not installed, scanning is silently disabled and a status-bar indicator appears."
+          "markdownDescription": "Scan outbound chat requests for secrets (API keys, tokens, etc.) before sending them to the LLM. `redact` runs the configured scanner (see `opencodego.secretScanner`); `off` short-circuits the scan. Detected secrets are replaced with `[REDACTED:<rule-id>]`. When at least one secret is redacted, a short system-level hint is added to the request telling the model that the placeholders are intentional redactions it can ignore (idempotent across turns). If the configured scanner is not installed, scanning is silently disabled and a status-bar indicator appears."
         },
         "opencodego.secretScanner": {
           "type": "string",

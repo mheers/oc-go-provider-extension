@@ -30,6 +30,9 @@ Integrates [OpenCode Go](https://opencode.ai/docs/ja/go) models into VS Code Cop
   - Pre-flight scan of every chat request using either [trufflehog](https://github.com/trufflesecurity/trufflehog) (default) or [gitleaks](https://github.com/gitleaks/gitleaks)
   - Detected secrets (API keys, tokens, private keys, …) are replaced with `[REDACTED:<rule-id>]`
     before the request is sent, so they never reach the LLM provider
+  - When a secret is redacted, a short system-level hint is added to the request (idempotent across
+    multi-turn conversations, only injected on the first redacted turn) telling the LLM that the
+    placeholders are intentional and can be safely ignored
   - Backend selected by `opencodego.secretScanner` (`trufflehog` | `gitleaks`, default `trufflehog`)
   - Action gated by `opencodego.secretScan` (`off` | `redact`, default `redact`)
   - Configurable binary paths via `opencodego.trufflehogPath` and `opencodego.gitleaksPath`

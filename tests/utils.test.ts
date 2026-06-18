@@ -16,7 +16,12 @@ import {
   convertTools,
   convertMessagesToAnthropic,
   convertToolsToAnthropic,
+  injectRedactionHintForOpenAI,
+  injectRedactionHintForAnthropic,
+  REDACTION_HINT_MARKER,
+  REDACTION_HINT_TEXT,
 } from "../src/utils";
+import type { JsonObject } from "../src/types";
 
 /**
  * Helper to cast mock messages to be compatible with utils.ts functions
@@ -685,5 +690,142 @@ describe("convertToolsToAnthropic", () => {
     expect(defAny["function"]).toBeUndefined();
     expect(defAny["parameters"]).toBeUndefined();
     expect(toolDef.input_schema).toBeDefined();
+  });
+});
+
+describe("injectRedactionHintForOpenAI", () => {
+  it("is a no-op when redacted=false", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [
+        { role: "user", content: "hi" },
+      ],
+    };
+    const out = injectRedactionHintForOpenAI(body, false);
+    expect(out).toBe(body);
+    expect((out["messages"] as unknown[]).length).toBe(1);
+  });
+
+  it("prepends a system message when redacted=true", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [
+        { role: "user", content: "use token=[REDACTED:aws-access-token]" },
+      ],
+    };
+    const out = injectRedactionHintForOpenAI(body, true);
+    const messages = out["messages"] as Array<{ role: string; content: string }>;
+    expect(messages.length).toBe(2);
+    expect(messages[0].role).toBe("system");
+    expect(messages[0].content).toBe(REDACTION_HINT_TEXT);
+    expect(messages[0].content).toContain(REDACTION_HINT_MARKER);
+    expect(messages[1].content).toBe(
+      "use token=[REDACTED:aws-access-token]"
+    );
+  });
+
+  it("is idempotent: a second call does not stack a copy", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "x" }],
+    };
+    const once = injectRedactionHintForOpenAI(body, true);
+    const twice = injectRedactionHintForOpenAI(once, true);
+    const messages = twice["messages"] as unknown[];
+    // First call adds one system message, second call must add zero.
+    expect(messages.length).toBe(2);
+  });
+
+  it("does not mutate the input body", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "x" }],
+    };
+    injectRedactionHintForOpenAI(body, true);
+    const messages = body["messages"] as unknown[];
+    expect(messages.length).toBe(1);
+  });
+
+  it("returns the body unchanged when messages is missing", () => {
+    const body: JsonObject = { model: "m" };
+    const out = injectRedactionHintForOpenAI(body, true);
+    expect(out).toBe(body);
+  });
+});
+
+describe("injectRedactionHintForAnthropic", () => {
+  it("is a no-op when redacted=false", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "hi" }],
+    };
+    const out = injectRedactionHintForAnthropic(body, false);
+    expect(out).toBe(body);
+  });
+
+  it("prepends to a string system field when redacted=true", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "hi" }],
+      system: "you are helpful",
+    };
+    const out = injectRedactionHintForAnthropic(body, true);
+    expect(typeof out["system"]).toBe("string");
+    const system = out["system"] as string;
+    expect(system.startsWith(REDACTION_HINT_TEXT)).toBe(true);
+    expect(system).toContain("you are helpful");
+  });
+
+  it("prepends to the first text block when system is an array", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "hi" }],
+      system: [
+        { type: "text", text: "you are helpful" },
+        { type: "text", text: "use short answers" },
+      ],
+    };
+    const out = injectRedactionHintForAnthropic(body, true);
+    const system = out["system"] as Array<{ type: string; text: string }>;
+    expect(Array.isArray(system)).toBe(true);
+    expect(system[0].type).toBe("text");
+    expect(system[0].text).toBe(REDACTION_HINT_TEXT);
+    expect(system[1].text).toBe("you are helpful");
+    expect(system[2].text).toBe("use short answers");
+  });
+
+  it("is idempotent across both system shapes", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "x" }],
+      system: "you are helpful",
+    };
+    const once = injectRedactionHintForAnthropic(body, true);
+    const twice = injectRedactionHintForAnthropic(once, true);
+    const system = twice["system"] as string;
+    // Count occurrences of the marker; should be exactly 1.
+    const matches = system.match(
+      new RegExp(REDACTION_HINT_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")
+    );
+    expect(matches?.length).toBe(1);
+  });
+
+  it("creates a system field when none is present", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "x" }],
+    };
+    const out = injectRedactionHintForAnthropic(body, true);
+    expect(out["system"]).toBe(REDACTION_HINT_TEXT);
+  });
+
+  it("does not mutate the input body", () => {
+    const body: JsonObject = {
+      model: "m",
+      messages: [{ role: "user", content: "x" }],
+      system: "you are helpful",
+    };
+    injectRedactionHintForAnthropic(body, true);
+    expect(body["system"]).toBe("you are helpful");
   });
 });

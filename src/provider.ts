@@ -16,6 +16,7 @@ import type {
   OcGoModelInfo,
   OcGoStreamResponse,
   Json,
+  JsonObject,
   OcGoRequestBody,
   AnthropicRequestBody,
   AnthropicSSEEvent,
@@ -33,6 +34,8 @@ import {
   estimateMessagesTokens,
   getTextPartValue,
   extractImageData,
+  injectRedactionHintForOpenAI,
+  injectRedactionHintForAnthropic,
 } from "./utils";
 import type { LegacyPart } from "./utils";
 import { OcGoMcpClient } from "./mcp";
@@ -111,6 +114,20 @@ function getSecretScanConfig(): {
 }
 
 /**
+ * Result of running the outbound secret scanner over a request body.
+ *
+ * - `body` is the (possibly) redacted body ready to send.
+ * - `redacted` is true iff at least one secret was replaced with a
+ *   `[REDACTED:<rule>]` placeholder. Callers use this flag to decide
+ *   whether to inject a hint into the body so the LLM does not get
+ *   confused by the placeholders.
+ */
+interface RedactedRequestBody {
+  body: Json;
+  redacted: boolean;
+}
+
+/**
  * Run the configured secret scanner over a JSON-stringified request body
  * and return a possibly-redacted body. Also reports findings to the
  * status bar. On any scanner error the original body is returned
@@ -124,11 +141,11 @@ function getSecretScanConfig(): {
 async function redactRequestBody(
   body: Json,
   apiFormat: OcGoApiFormat
-): Promise<Json> {
+): Promise<RedactedRequestBody> {
   const { action, scanner } = getSecretScanConfig();
   if (action === "off") {
     secretScanLog.scanDisabled();
-    return body;
+    return { body, redacted: false };
   }
 
   const serialized = JSON.stringify(body);
@@ -174,17 +191,17 @@ async function redactRequestBody(
         if (picked === "Show Log") secretScanLog.reveal();
       });
   }
-  if (!result.redacted) return body;
+  if (!result.redacted) return { body, redacted: false };
 
   try {
-    return JSON.parse(result.text) as Json;
+    return { body: JSON.parse(result.text) as Json, redacted: true };
   } catch {
     secretScanLog.scanParseError(result.text.slice(0, 200));
     debugLog("SECRET-SCAN-PARSE-ERROR", {
       apiFormat,
       output: result.text.slice(0, 200),
     });
-    return body;
+    return { body, redacted: false };
   }
 }
 const MAX_OCR_TOKENS = 16000;
@@ -872,10 +889,21 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       });
     }
 
-    const scannedBody = (await redactRequestBody(
-      requestBody as unknown as Json,
-      "openai"
-    )) as unknown as OcGoRequestBody;
+    const { body: scannedRaw, redacted: scannedRedacted } =
+      await redactRequestBody(requestBody as unknown as Json, "openai");
+    // If the scanner replaced any secrets, append a short system
+    // message so the LLM does not get confused by the
+    // `[REDACTED:<rule>]` placeholders and try to "decode" them or
+    // ask the user for the original value. The injector is
+    // idempotent, so multi-turn conversations do not stack copies.
+    const scannedBody = (
+      scannedRedacted
+        ? injectRedactionHintForOpenAI(
+            scannedRaw as JsonObject,
+            scannedRedacted
+          )
+        : (scannedRaw as JsonObject)
+    ) as unknown as OcGoRequestBody;
 
     const response = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -980,10 +1008,21 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       tool_choice: requestBody.tool_choice,
     });
 
-    const scannedBody = (await redactRequestBody(
-      requestBody as unknown as Json,
-      "anthropic"
-    )) as unknown as AnthropicRequestBody;
+    const { body: scannedRaw, redacted: scannedRedacted } =
+      await redactRequestBody(requestBody as unknown as Json, "anthropic");
+    // If the scanner replaced any secrets, prepend a short hint to
+    // the top-level `system` field so the LLM knows the
+    // `[REDACTED:<rule>]` placeholders are intentional. Idempotent:
+    // the hint is only added on the first redacted turn of a
+    // conversation.
+    const scannedBody = (
+      scannedRedacted
+        ? injectRedactionHintForAnthropic(
+            scannedRaw as JsonObject,
+            scannedRedacted
+          )
+        : (scannedRaw as JsonObject)
+    ) as unknown as AnthropicRequestBody;
 
     const response = await fetch(`${BASE_URL}/messages`, {
       method: "POST",
