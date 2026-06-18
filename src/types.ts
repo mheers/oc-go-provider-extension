@@ -500,6 +500,17 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     apiFormat: "openai",
     thinkingMode: "switchable",
   },
+  {
+    id: "glm-5.2",
+    name: "GLM-5.2",
+    displayName: "GLM-5.2",
+    contextWindow: 202752,
+    maxOutput: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    apiFormat: "openai",
+    thinkingMode: "none",
+  },
 ];
 
 /** Default model used for OCR/vision proxy when non-vision models receive images */
