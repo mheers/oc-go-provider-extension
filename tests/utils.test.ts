@@ -697,9 +697,7 @@ describe("injectRedactionHintForOpenAI", () => {
   it("is a no-op when redacted=false", () => {
     const body: JsonObject = {
       model: "m",
-      messages: [
-        { role: "user", content: "hi" },
-      ],
+      messages: [{ role: "user", content: "hi" }],
     };
     const out = injectRedactionHintForOpenAI(body, false);
     expect(out).toBe(body);
@@ -714,14 +712,15 @@ describe("injectRedactionHintForOpenAI", () => {
       ],
     };
     const out = injectRedactionHintForOpenAI(body, true);
-    const messages = out["messages"] as Array<{ role: string; content: string }>;
+    const messages = out["messages"] as Array<{
+      role: string;
+      content: string;
+    }>;
     expect(messages.length).toBe(2);
     expect(messages[0].role).toBe("system");
     expect(messages[0].content).toBe(REDACTION_HINT_TEXT);
     expect(messages[0].content).toContain(REDACTION_HINT_MARKER);
-    expect(messages[1].content).toBe(
-      "use token=[REDACTED:aws-access-token]"
-    );
+    expect(messages[1].content).toBe("use token=[REDACTED:aws-access-token]");
   });
 
   it("is idempotent: a second call does not stack a copy", () => {
@@ -805,7 +804,10 @@ describe("injectRedactionHintForAnthropic", () => {
     const system = twice["system"] as string;
     // Count occurrences of the marker; should be exactly 1.
     const matches = system.match(
-      new RegExp(REDACTION_HINT_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")
+      new RegExp(
+        REDACTION_HINT_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "g"
+      )
     );
     expect(matches?.length).toBe(1);
   });

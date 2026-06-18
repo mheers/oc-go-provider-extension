@@ -896,14 +896,9 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     // `[REDACTED:<rule>]` placeholders and try to "decode" them or
     // ask the user for the original value. The injector is
     // idempotent, so multi-turn conversations do not stack copies.
-    const scannedBody = (
-      scannedRedacted
-        ? injectRedactionHintForOpenAI(
-            scannedRaw as JsonObject,
-            scannedRedacted
-          )
-        : (scannedRaw as JsonObject)
-    ) as unknown as OcGoRequestBody;
+    const scannedBody = (scannedRedacted
+      ? injectRedactionHintForOpenAI(scannedRaw as JsonObject, scannedRedacted)
+      : (scannedRaw as JsonObject)) as unknown as OcGoRequestBody;
 
     const response = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -1015,14 +1010,12 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     // `[REDACTED:<rule>]` placeholders are intentional. Idempotent:
     // the hint is only added on the first redacted turn of a
     // conversation.
-    const scannedBody = (
-      scannedRedacted
-        ? injectRedactionHintForAnthropic(
-            scannedRaw as JsonObject,
-            scannedRedacted
-          )
-        : (scannedRaw as JsonObject)
-    ) as unknown as AnthropicRequestBody;
+    const scannedBody = (scannedRedacted
+      ? injectRedactionHintForAnthropic(
+          scannedRaw as JsonObject,
+          scannedRedacted
+        )
+      : (scannedRaw as JsonObject)) as unknown as AnthropicRequestBody;
 
     const response = await fetch(`${BASE_URL}/messages`, {
       method: "POST",

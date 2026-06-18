@@ -150,6 +150,11 @@ export const trufflehogScanner: Scanner = {
         findingCount: findings.length,
         durationMs: duration,
         rules: Array.from(new Set(findings.map((f) => f.ruleId))),
+        locations: findings.map((f) => ({
+          ruleId: f.ruleId,
+          file: f.file,
+          line: f.line,
+        })),
       });
       return { redacted: redacted !== text, findings, text: redacted };
     } catch (err) {
@@ -196,10 +201,19 @@ function parseTrufflehogNdjson(raw: string): SecretFinding[] {
     const ruleId = parsed.DetectorName.trim();
     const secret = typeof parsed.Raw === "string" ? parsed.Raw : "";
     if (!ruleId || !secret) continue;
+    const fsMeta = parsed.SourceMetadata?.Data?.Filesystem;
+    const file =
+      fsMeta && typeof fsMeta.file === "string" ? fsMeta.file : undefined;
+    const lineNumber =
+      fsMeta && typeof fsMeta.line === "number" && Number.isFinite(fsMeta.line)
+        ? fsMeta.line
+        : undefined;
     findings.push({
       ruleId,
       secret,
       redacted: `[REDACTED:${ruleId}]`,
+      file,
+      line: lineNumber,
     });
   }
   return findings;

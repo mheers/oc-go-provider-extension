@@ -18,11 +18,12 @@ import { debugLog } from "../src/logging";
  *
  * The mock keeps a registry of pending responses per call, keyed by
  * the first CLI argument, so we can distinguish the `--version` probe
- * (sent by `availability()`) from the actual `detect --pipe -s` scan.
+ * (sent by `availability()`) from the actual `stdin` scan.
  *
- * The `reportPath` for the fake scan is parsed out of the spawn args
- * and the queued `stdout` is written to that file on close() so the
- * real code path (which reads the JSON report from disk) is exercised.
+ * gitleaks' `stdin` subcommand writes its JSON report to stdout
+ * directly (`--report-path -`), so the queued `stdout` is pushed to
+ * the child's stdout stream on close() and the real code path (which
+ * reads the JSON report from stdout) is exercised.
  */
 class FakeChildProcess extends EventEmitter {
   public stdin: Writable;
@@ -90,17 +91,8 @@ jest.mock("child_process", () => {
         (child.stdout as Readable).push(null);
         if (next.stderr) child.stderr.push(next.stderr);
         (child.stderr as Readable).push(null);
-        // The fake "gitleaks" writes its JSON report to whatever path
-        // was passed via `--report-path` (parsed out of args here).
-        // Production reads the report back from disk on `close`.
-        const reportPath = extractReportPath(args);
-        if (reportPath && next.stdout !== undefined) {
-          try {
-            require("fs").writeFileSync(reportPath, next.stdout, "utf8");
-          } catch {
-            /* swallow — production code will report the read error */
-          }
-        }
+        // gitleaks `stdin` subcommand writes its JSON report to stdout
+        // directly (`--report-path -`), so no report file is written.
         child.emit("close", next.exitCode ?? 0);
       };
       child.stdin.on("finish", send);
@@ -109,12 +101,6 @@ jest.mock("child_process", () => {
     }),
   };
 });
-
-function extractReportPath(args: string[]): string | undefined {
-  const i = args.indexOf("--report-path");
-  if (i < 0 || i + 1 >= args.length) return undefined;
-  return args[i + 1];
-}
 
 jest.mock("../src/logging", () => ({
   debugLog: jest.fn(),
@@ -144,7 +130,7 @@ function enqueueVersionProbe(): void {
 
 function enqueueScan(stdout: string, exitCode = 0): void {
   queue.push({
-    matchArgs: (args) => args[0] === "detect",
+    matchArgs: (args) => args[0] === "stdin",
     stdout,
     exitCode,
   });
@@ -179,8 +165,9 @@ describe("scanAndRedact", () => {
         RuleID: "aws-access-token",
         Secret: "AKIAIOSFODNN7EXAMPLE",
         Match: "AKIAIOSFODNN7EXAMPLE",
-        File: "-",
-        Line: 1,
+        // stdin-mode shape: File is empty, StartLine carries the line.
+        File: "",
+        StartLine: 1,
       },
     ]);
     enqueueScan(finding);
@@ -267,7 +254,7 @@ describe("scanAndRedact", () => {
     expect(result.redacted).toBe(false);
     expect(result.findings).toEqual([]);
     // No scan should have been spawned
-    expect(spawned.find((c) => c.args[0] === "detect")).toBeUndefined();
+    expect(spawned.find((c) => c.args[0] === "stdin")).toBeUndefined();
   });
 
   it("logs findings via debugLog", async () => {
@@ -286,6 +273,80 @@ describe("scanAndRedact", () => {
         rules: ["stripe-secret"],
       })
     );
+  });
+});
+
+/**
+ * Regression coverage for the output-channel outcome lines.
+ *
+ * `scanAndRedact` must emit exactly one closing line per scan-started
+ * header: `scanClean` on a no-findings run, `scanRedacted` (with
+ * per-finding file:line) when secrets are replaced, and
+ * `scanUnavailable` when the configured binary is missing. Before this
+ * was wired up the user only ever saw the "scan started" header and
+ * then silence.
+ */
+describe("scanAndRedact output-channel outcomes", () => {
+  let fakeChannel: { appendLine: jest.Mock };
+  let originalChannel: unknown;
+
+  beforeEach(() => {
+    fakeChannel = { appendLine: jest.fn() };
+    // Swap the shared channel singleton for a fake for the duration
+    // of each test. We import lazily so the module-level singleton in
+    // secretScanLog.ts picks up our fake.
+    const logModule = require("../src/secretScanLog");
+    originalChannel = (logModule as { _channel?: unknown })._channel;
+    logModule.setChannelForTests(fakeChannel);
+  });
+
+  afterEach(() => {
+    const logModule = require("../src/secretScanLog");
+    logModule.setChannelForTests(originalChannel);
+  });
+
+  it("emits a scanClean line when the scanner finds nothing", async () => {
+    enqueueScan("[]");
+    await scanAndRedact("hello world", {
+      timeoutMs: 1000,
+      availabilityOverride: AVAILABLE,
+    });
+    const lines = fakeChannel.appendLine.mock.calls.map((c) => c[0]);
+    expect(lines.some((l) => /✓ clean/.test(l))).toBe(true);
+  });
+
+  it("emits a scanRedacted line with file:line per finding", async () => {
+    const findings = JSON.stringify([
+      {
+        RuleID: "aws-access-token",
+        Secret: "AKIAIOSFODNN7EXAMPLE",
+        Match: "AKIAIOSFODNN7EXAMPLE",
+        // In `stdin` mode gitleaks leaves `File` empty (there is no
+        // on-disk source) and reports the 1-indexed line as `StartLine`.
+        File: "",
+        StartLine: 42,
+      },
+    ]);
+    enqueueScan(findings);
+    await scanAndRedact('token = "AKIAIOSFODNN7EXAMPLE"', {
+      timeoutMs: 1000,
+      availabilityOverride: AVAILABLE,
+    });
+    const lines = fakeChannel.appendLine.mock.calls.map((c) => c[0]);
+    expect(lines.some((l) => /⚠ redacted 1 finding/.test(l))).toBe(true);
+    // With no File reported, the log falls back to "unknown" but
+    // still includes the line number.
+    expect(lines.some((l) => /file=unknown:42/.test(l))).toBe(true);
+  });
+
+  it("emits a scanUnavailable line when the binary is missing", async () => {
+    await scanAndRedact('AKIA"hello"', {
+      timeoutMs: 1000,
+      availabilityOverride: "missing",
+    });
+    const lines = fakeChannel.appendLine.mock.calls.map((c) => c[0]);
+    expect(lines.some((l) => /✗ scan unavailable/.test(l))).toBe(true);
+    expect(lines.some((l) => /binary not found/.test(l))).toBe(true);
   });
 });
 

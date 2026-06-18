@@ -1,22 +1,21 @@
 /**
  * gitleaks backend (https://github.com/gitleaks/gitleaks).
  *
- * gitleaks v8.x requires both `--pipe` (read stdin) AND a real source
- * path on `-s`; without `-s` it scans 0 bytes regardless of the stdin
- * content. We therefore stage the JSON body to a temp file in a
- * private tmpdir and pass that path via `-s`. The JSON report is
- * written to a sibling file (`report.json`) and read back here.
+ * We use the `gitleaks stdin` subcommand to scan the request body
+ * directly from the process's stdin pipe. This avoids writing the
+ * body (which may contain secrets) to a temp file on disk — a
+ * crashed process could otherwise leave secrets in `/tmp`. The JSON
+ * report is emitted on stdout via `--report-path -`.
+ *
+ * gitleaks v8.x also has a `detect --pipe` mode, but that flag is
+ * for piping git-log output, not arbitrary file content: without
+ * `-s` it falls back to scanning the current directory (`.`), and
+ * with `-s -` or `-s /dev/stdin` it scans 0 bytes. The dedicated
+ * `stdin` subcommand is the only way to feed arbitrary content
+ * without a real on-disk path.
  */
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { debugLog } from "../logging";
-import {
-  applyRedactions,
-  cleanupStage,
-  spawnScanner,
-  stageInput,
-  whichProbe,
-} from "./runner";
+import { applyRedactions, spawnScanner, whichProbe } from "./runner";
 import type {
   Scanner,
   ScanOptions,
@@ -38,6 +37,33 @@ let _availabilityCache: ScannerAvailability | undefined;
 
 export function gitleaksResetAvailabilityCache(): void {
   _availabilityCache = undefined;
+}
+
+/**
+ * Build the argv we hand to `gitleaks stdin`. Centralised so the test
+ * suite can assert on the exact set of flags.
+ *
+ * Notable flags:
+ *   - `stdin`                         subcommand — read body from our stdin
+ *   - `--no-banner`                   suppress the startup banner
+ *   - `--report-format json`          emit findings as a JSON array
+ *   - `--report-path -`               write the report to stdout (no temp file)
+ *   - `--exit-code 0`                 never fail the request on findings
+ *   - `--log-level error`             suppress info/warn log lines on stderr
+ */
+export function gitleaksBuildArgs(): string[] {
+  return [
+    "stdin",
+    "--no-banner",
+    "--report-format",
+    "json",
+    "--report-path",
+    "-",
+    "--exit-code",
+    "0",
+    "--log-level",
+    "error",
+  ];
 }
 
 export const gitleaksScanner: Scanner = {
@@ -65,57 +91,33 @@ export const gitleaksScanner: Scanner = {
 
     const binary = resolveGitleaksPath();
     const t0 = Date.now();
-    let dir: string | undefined;
-    let reportPath: string | undefined;
     try {
-      const staged = await stageInput(text, "payload");
-      dir = staged.dir;
-      reportPath = join(dir, "report.json");
-      // gitleaks v8 wants something on stdin to consume when `--pipe`
-      // is set; the actual content is read from the source file.
-      const stdout = await spawnScanner(
-        binary,
-        [
-          "detect",
-          "--no-git",
-          "--no-banner",
-          "--pipe",
-          "-s",
-          staged.path,
-          "--report-format",
-          "json",
-          "--report-path",
-          reportPath,
-          "--exit-code",
-          "0", // never fail the request even if findings exist
-        ],
-        { timeoutMs: options.timeoutMs, stdinInput: "\n" }
-      );
+      const stdout = await spawnScanner(binary, gitleaksBuildArgs(), {
+        timeoutMs: options.timeoutMs,
+        stdinInput: text,
+      });
       const duration = Date.now() - t0;
 
-      // The JSON report lives on disk (not on stdout) because
-      // gitleaks v8 opens the report file with `os.Create` and
-      // `/dev/stdout` is not a valid target from a child process.
-      let raw = stdout;
-      if (raw.length === 0) {
-        try {
-          raw = await readFile(reportPath, "utf8");
-        } catch (err) {
-          debugLog("SECRET-SCAN-REPORT-READ-ERROR", {
-            reportPath,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          return empty;
-        }
+      const findings = parseGitleaksJson(stdout);
+      if (findings.length === 0) {
+        debugLog("SECRET-SCAN", {
+          backend: "gitleaks",
+          findingCount: 0,
+          durationMs: duration,
+        });
+        return empty;
       }
-      const findings = parseGitleaksJson(raw);
-      if (findings.length === 0) return empty;
       const redacted = applyRedactions(text, findings);
       debugLog("SECRET-SCAN", {
         backend: "gitleaks",
         findingCount: findings.length,
         durationMs: duration,
         rules: Array.from(new Set(findings.map((f) => f.ruleId))),
+        locations: findings.map((f) => ({
+          ruleId: f.ruleId,
+          file: f.file,
+          line: f.line,
+        })),
       });
       return { redacted: redacted !== text, findings, text: redacted };
     } catch (err) {
@@ -124,8 +126,6 @@ export const gitleaksScanner: Scanner = {
         error: err instanceof Error ? err.message : String(err),
       });
       return empty;
-    } finally {
-      await cleanupStage(dir);
     }
   },
 };
@@ -136,7 +136,7 @@ interface RawGitleaksFinding {
   Match?: string;
   Secret?: string;
   File?: string;
-  Line?: number;
+  StartLine?: number;
 }
 
 function parseGitleaksJson(raw: string): SecretFinding[] {
@@ -179,6 +179,17 @@ function parseGitleaksJson(raw: string): SecretFinding[] {
       ruleId,
       secret,
       redacted: `[REDACTED:${ruleId}]`,
+      // In `stdin` mode gitleaks leaves `File` empty (there is no
+      // on-disk source); `StartLine` is the 1-indexed line within
+      // the piped input.
+      file:
+        typeof item.File === "string" && item.File.length > 0
+          ? item.File
+          : undefined,
+      line:
+        typeof item.StartLine === "number" && Number.isFinite(item.StartLine)
+          ? item.StartLine
+          : undefined,
     });
   }
   return findings;

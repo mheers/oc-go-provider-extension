@@ -16,10 +16,10 @@
  *   result.
  *
  * Input shape:
- *   Both gitleaks v8 and trufflehog `filesystem` require a real path
- *   on the command line; neither accepts `-` or `/dev/stdin`. The
- *   `stageInput` helper writes the JSON body to a fresh tmpdir; the
- *   scanner backend owns the file lifecycle (unlink on completion).
+ *   Both gitleaks (`gitleaks stdin`) and trufflehog (`trufflehog
+ *   stdin`) read the request body directly from the spawned child's
+ *   stdin pipe. Neither writes the body to disk, so a crashed process
+ *   cannot leave secrets behind in a temp directory.
  *
  * @see ./scanners/types.ts
  * @see ./scanners/registry.ts
@@ -121,12 +121,31 @@ export async function scanAndRedact(
     availabilityOverride: options.availabilityOverride,
   };
 
-  const result = await resolveConfiguredScanner().scan(text, opts);
-  if (result.findings.length === 0) {
-    // Note: the per-scanner debugLog call already fired for clean
-    // runs; we don't need a second log line here. The output-channel
-    // summary is emitted by the provider.ts caller.
+  // Surface scanner-unavailability in the output channel. Without
+  // this the user only ever sees the "scan started" header and then
+  // silence, because the scanner backends return an empty result
+  // (findings=[]) when the binary is missing — indistinguishable
+  // from a clean run.
+  const scanner = resolveConfiguredScanner();
+  const avail =
+    options.availabilityOverride ?? (await scanner.checkAvailability());
+  if (avail !== "available") {
+    // avail can only be "missing" here — "disabled" is handled above
+    // via the action === "off" branch.
+    secretScanLog.scanUnavailable("missing");
     return empty;
   }
+
+  const t0 = Date.now();
+  const result = await scanner.scan(text, opts);
+  const durationMs = Date.now() - t0;
+  if (result.findings.length === 0) {
+    // Note: the per-scanner debugLog call already fired for clean
+    // runs; emit the output-channel summary here so the user sees a
+    // closing line for every scan-started header.
+    secretScanLog.scanClean(durationMs);
+    return empty;
+  }
+  secretScanLog.scanRedacted(result.findings, durationMs);
   return result;
 }

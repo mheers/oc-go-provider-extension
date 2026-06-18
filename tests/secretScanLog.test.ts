@@ -121,6 +121,32 @@ describe("secretScanLog", () => {
     expect(joined).toMatch(/MIIB.+Qu/);
   });
 
+  it("includes the file and line for findings that report them", () => {
+    const findings = [
+      {
+        ruleId: "aws-access-token",
+        secret: "AKIAIOSFODNN7EXAMPLE",
+        redacted: "[REDACTED:aws-access-token]",
+        file: "/tmp/ocg-scanner-abc/payload",
+        line: 17,
+      },
+    ];
+    secretScanLog.scanRedacted(findings, 5);
+    expect(fake.lines[1]).toMatch(/file=\/tmp\/ocg-scanner-abc\/payload:17/);
+  });
+
+  it("falls back to 'unknown' when no file is reported", () => {
+    const findings = [
+      {
+        ruleId: "aws-access-token",
+        secret: "AKIAIOSFODNN7EXAMPLE",
+        redacted: "[REDACTED:aws-access-token]",
+      },
+    ];
+    secretScanLog.scanRedacted(findings, 5);
+    expect(fake.lines[1]).toMatch(/file=unknown/);
+  });
+
   it("emits a disabled line when action=off", () => {
     secretScanLog.scanDisabled();
     expect(fake.lines[0]).toMatch(/⊘ scan skipped — action=off/);

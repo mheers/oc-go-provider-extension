@@ -6,15 +6,13 @@
  * not have to know which one is in use.
  *
  * Common input shape:
- *   1. Caller stages the JSON-serialized request body to a private
- *      temp file and passes the path to {@link Scanner.scan}.
- *      TruffleHog and gitleaks v8 both require a real path (no
- *      `-` / `/dev/stdin`), so we standardize on the staged-file
- *      approach. The caller owns the file's lifecycle (create before,
- *      unlink after).
+ *   1. Caller passes the JSON-serialized request body to
+ *      {@link Scanner.scan}, which pipes it to the spawned binary's
+ *      stdin. Neither backend writes the body to disk, so a crashed
+ *      process cannot leave secrets behind in a temp directory.
  *   2. The scanner spawns its binary with the args it needs, reads the
- *      report (file or stdout, depending on the tool) and returns a
- *      normalized {@link ScanResult}.
+ *      JSON report from stdout, and returns a normalized
+ *      {@link ScanResult}.
  *
  * Adding a new backend means writing one file in this directory and
  * registering it in `registry.ts`.
@@ -28,6 +26,18 @@ export interface SecretFinding {
   secret: string;
   /** Redacted replacement applied to the input. */
   redacted: string;
+  /**
+   * Path to the file the scanner reported the finding against, if
+   * any. Both backends now scan from stdin, so this is typically
+   * empty/undefined for the chat-request scan. Used purely for
+   * log/UI context — it is not propagated to the LLM.
+   */
+  file?: string;
+  /**
+   * 1-indexed line number within `file` where the scanner reported
+   * the finding. Like `file`, this is informational only.
+   */
+  line?: number;
 }
 
 /** Result of scanning a chunk of text. */

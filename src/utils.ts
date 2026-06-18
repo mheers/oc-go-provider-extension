@@ -937,7 +937,8 @@ export function estimateMessagesTokens(
  * substring of {@link REDACTION_HINT_TEXT} so the idempotency check
  * works.
  */
-export const REDACTION_HINT_MARKER = "[REDACTED:*] placeholders are intentional";
+export const REDACTION_HINT_MARKER =
+  "[REDACTED:*] placeholders are intentional";
 
 /**
  * The full hint text. Kept as short as we could make it while still
@@ -971,7 +972,10 @@ export function injectRedactionHintForOpenAI(
   for (const m of messages) {
     if (m && typeof m === "object" && (m as JsonObject)["role"] === "system") {
       const content = (m as JsonObject)["content"];
-      if (typeof content === "string" && content.includes(REDACTION_HINT_MARKER)) {
+      if (
+        typeof content === "string" &&
+        content.includes(REDACTION_HINT_MARKER)
+      ) {
         return body;
       }
     }

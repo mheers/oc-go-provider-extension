@@ -8,7 +8,9 @@
  * and a stray positional `-` that made gitleaks scan the wrong
  * directory. The result was always "0 bytes scanned, no leaks found"
  * regardless of the input — every scan in production was silently
- * passing.
+ * passing. The fix uses gitleaks' `stdin` subcommand, which reads
+ * arbitrary content from the stdin pipe and emits a JSON report on
+ * stdout (`--report-path -`), with no temp file on disk.
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";

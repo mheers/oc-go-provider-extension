@@ -3,6 +3,7 @@
         "trufflehog": true,
         "npx jest": true,
         "npx tsc": true,
-        "npx eslint": true
+        "npx eslint": true,
+        "gitleaks": true
     }
 }

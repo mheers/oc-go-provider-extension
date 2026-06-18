@@ -135,8 +135,11 @@ export const secretScanLog = {
       )}ms):`
     );
     findings.forEach((f, i) => {
+      const file = f.file ?? "unknown";
+      const location = typeof f.line === "number" ? `${file}:${f.line}` : file;
       ch.appendLine(
         `  ${i + 1}. rule=${f.ruleId}  redacted=${f.redacted}  ` +
+          `file=${location}  ` +
           `secret=${redactPreview(f.secret)}`
       );
     });

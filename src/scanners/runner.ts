@@ -6,8 +6,6 @@
  * uniform and the spawning logic in one well-tested place, this module
  * owns:
  *
- *  - {@link stageInput} / {@link cleanupStage} — write a payload to a
- *    fresh tmpdir and clean it up afterwards.
  *  - {@link spawnScanner} — generic, timeout-bounded child-process
  *    spawn with a structured error/cancellation story.
  *  - {@link applyRedactions} — longest-first string replacement,
@@ -18,9 +16,6 @@
 import { spawn } from "child_process";
 import type { ChildProcess } from "child_process";
 import { access, constants } from "fs/promises";
-import { mkdtemp, rm, writeFile } from "fs/promises";
-import { tmpdir } from "os";
-import { join } from "path";
 import type { SecretFinding } from "./types";
 
 /** Hard cap on a scanner's stdout in bytes (defence against runaway output). */
@@ -148,31 +143,6 @@ export async function whichProbe(
     }
   }
   return canSpawn(binary, ["--version"], versionTimeoutMs);
-}
-
-/**
- * Stage `text` to a fresh tmpdir and return the directory path plus
- * the staged file path. The caller MUST pass the directory to
- * {@link cleanupStage} when done.
- */
-export async function stageInput(
-  text: string,
-  filename: string
-): Promise<{ dir: string; path: string }> {
-  const dir = await mkdtemp(join(tmpdir(), "ocg-scanner-"));
-  const path = join(dir, filename);
-  await writeFile(path, text, "utf8");
-  return { dir, path };
-}
-
-/** Best-effort removal of a tmpdir created by {@link stageInput}. */
-export async function cleanupStage(dir: string | undefined): Promise<void> {
-  if (!dir) return;
-  try {
-    await rm(dir, { recursive: true, force: true });
-  } catch {
-    /* best effort */
-  }
 }
 
 /**
