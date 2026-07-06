@@ -39,6 +39,13 @@ Integrates [OpenCode Go](https://opencode.ai/docs/ja/go) models into VS Code Cop
   - TruffleHog runs with `--no-verification` and `--no-update` so it never makes network calls during a scan
   - Status surfaced via the command `OpenCode Go: Show Secret Scan Status`
 
+> **Note:** TruffleHog must be installed manually. You can build it from source:
+>
+> ```bash
+> git clone https://github.com/trufflesecurity/trufflehog.git
+> cd trufflehog; go install
+> ```
+
 ## Installation
 
 ### From Source
@@ -46,7 +53,7 @@ Integrates [OpenCode Go](https://opencode.ai/docs/ja/go) models into VS Code Cop
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/Ryosuke-Asano/oc-go-provider-extension.git
+git clone https://github.com/mheers/oc-go-provider-extension.git
 cd oc-go-provider-extension
 ```
 
