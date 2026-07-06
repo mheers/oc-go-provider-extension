@@ -236,10 +236,16 @@ export function canSpawn(
  * Check whether `binary` is reachable. For paths containing a
  * separator we use `fs.access` with X_OK (cheap, no spawn). For bare
  * names we use a `--version` probe.
+ *
+ * The default probe timeout is intentionally generous: TruffleHog's
+ * `--version` can take well over 1 s on a cold start (observed ~1.4 s
+ * on a warm Linux box and >2 s on a cold WSL VM). A too-short timeout
+ * falsely marks the scanner as missing and silently disables secret
+ * scanning for the rest of the process lifetime.
  */
 export async function whichProbe(
   binary: string,
-  versionTimeoutMs = 1_000
+  versionTimeoutMs = 3_000
 ): Promise<boolean> {
   if (binary.includes("/") || binary.includes("\\")) {
     try {
