@@ -80,6 +80,11 @@ export function activate(context: vscode.ExtensionContext) {
           action: () => promptForApiKey(context, existing),
         });
         items.push({
+          label: "$(eye) Show API Key…",
+          description: "Reveal the currently stored OpenCode Go API key",
+          action: () => revealApiKey(existing),
+        });
+        items.push({
           label: "$(trash) Clear API Key",
           description: "Remove the stored OpenCode Go API key",
           action: async () => {
@@ -279,6 +284,23 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Show API Key — reveals the currently stored OpenCode Go API key
+  // in a modal so the user can copy it. Useful when the key needs to
+  // be pasted into another tool (curl, another editor, …). Disabled
+  // (informative message) when no key is stored yet.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("opencode-go.showApiKey", async () => {
+      const stored = await context.secrets.get("opencode-go.apiKey");
+      if (!stored) {
+        vscode.window.showInformationMessage(
+          "No OpenCode Go API key is set. Use 'Set API Key…' to store one."
+        );
+        return;
+      }
+      await revealApiKey(stored);
+    })
+  );
+
   console.log("[OpenCode Go Provider] Extension activated");
 }
 
@@ -315,6 +337,49 @@ async function promptForApiKey(
   await context.secrets.store("opencode-go.apiKey", apiKey.trim());
   vscode.window.showInformationMessage("OpenCode Go API key saved.");
   _provider?.fireModelInfoChanged();
+}
+
+/**
+ * Reveal the currently stored OpenCode Go API key in a modal dialog
+ * with a "Copy to Clipboard" action.
+ *
+ * The key is read from {@link vscode.SecretStorage}, which on every
+ * supported platform is encrypted at rest by VS Code (libsecret on
+ * Linux, Keychain on macOS, DPAPI on Windows). "Decrypting" here
+ * just means surfacing the plaintext so the user can copy it —
+ * no additional crypto layer is involved.
+ *
+ * The key is shown verbatim inside a modal `showInformationMessage`.
+ * VS Code has no built-in read-only text dialog, so we offer the
+ * user a single "Copy to Clipboard" action and otherwise close the
+ * dialog. The full key is also written to a temporary, read-only
+ * untitled document so it can be selected and copied manually as a
+ * fallback (e.g. when the clipboard is being recorded).
+ */
+async function revealApiKey(apiKey: string): Promise<void> {
+  // 1. Offer the convenient one-click copy path.
+  const copy = "Copy to Clipboard";
+  const choice = await vscode.window.showInformationMessage(
+    `OpenCode Go API Key\n\n${apiKey}`,
+    { modal: true, detail: "Click 'Copy to Clipboard' to copy this key." },
+    copy
+  );
+  if (choice === copy) {
+    await vscode.env.clipboard.writeText(apiKey);
+    vscode.window.showInformationMessage(
+      "OpenCode Go API key copied to clipboard."
+    );
+    return;
+  }
+
+  // 2. Fallback: open a read-only document containing the key so the
+  //    user can select and copy it manually. Untitled documents
+  //    have a fixed name we don't need to clean up.
+  const doc = await vscode.workspace.openTextDocument({
+    content: apiKey,
+    language: "plaintext",
+  });
+  await vscode.window.showTextDocument(doc, { preview: false });
 }
 
 export function deactivate() {

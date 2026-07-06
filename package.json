@@ -76,6 +76,11 @@
         "command": "opencode-go.showSecretScanLog",
         "title": "Show Secret Scan Log",
         "category": "OpenCode Go"
+      },
+      {
+        "command": "opencode-go.showApiKey",
+        "title": "Show API Key",
+        "category": "OpenCode Go"
       }
     ],
     "configuration": {
