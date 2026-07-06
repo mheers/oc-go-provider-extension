@@ -5,6 +5,10 @@ import {
   setChannelForTests,
   getChannel,
 } from "../src/secretScanLog";
+// `scanTimedOut` is referenced below by its dotted name
+// (secretScanLog.scanTimedOut) to keep the destructured import
+// surface stable when new log methods are added.
+void secretScanLog;
 
 /**
  * Tiny in-memory stand-in for `vscode.OutputChannel`. The mock captures
@@ -78,6 +82,23 @@ describe("secretScanLog", () => {
   it("emits a clean-result line with the duration", () => {
     secretScanLog.scanClean(42.3);
     expect(fake.lines[0]).toMatch(/✓ clean — no findings \(42\.3ms\)/);
+  });
+
+  it("emits a distinct timed-out line so it cannot be confused with clean", async () => {
+    // Regression test: a 2 s scan that exceeded its timeout used to be
+    // reported as "clean — no findings", silently leaking the
+    // unredacted body to the LLM. The log line MUST be visibly
+    // distinct from `scanClean` so the user can tell the two cases
+    // apart in the Output view.
+    secretScanLog.scanTimedOut(2010, 2000, "trufflehog", 0);
+    expect(fake.lines[0]).toMatch(/⏱ timed out/);
+    expect(fake.lines[0]).toMatch(/trufflehog/);
+    expect(fake.lines[0]).toMatch(/timeout=2000ms/);
+    expect(fake.lines[0]).toMatch(/2010\.0ms/);
+    expect(fake.lines[0]).toMatch(/Body may contain unredacted secrets/);
+    // Crucially, it must NOT match the clean-result line — those two
+    // outcomes are semantically opposite and must be visually distinct.
+    expect(fake.lines[0]).not.toMatch(/✓ clean/);
   });
 
   it("emits a redaction summary plus one line per finding", () => {

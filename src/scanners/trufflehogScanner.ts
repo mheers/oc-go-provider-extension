@@ -129,11 +129,31 @@ export const trufflehogScanner: Scanner = {
     const binary = resolveTrufflehogPath();
     const t0 = Date.now();
     try {
-      const stdout = await spawnScanner(binary, trufflehogBuildArgs(), {
-        timeoutMs: options.timeoutMs,
-        stdinInput: text,
-      });
+      const { stdout, timedOut } = await spawnScanner(
+        binary,
+        trufflehogBuildArgs(),
+        {
+          timeoutMs: options.timeoutMs,
+          stdinInput: text,
+        }
+      );
       const duration = Date.now() - t0;
+
+      if (timedOut) {
+        // TruffleHog on a 80 KB+ body can exceed the 2 s default
+        // timeout on a cold WSL VM. The partial NDJSON we've already
+        // received is not safe to apply — there could be findings
+        // in the unread tail. Surface the timeout to the caller so
+        // it can emit a distinct log line (and so the test suite can
+        // assert on the behaviour).
+        debugLog("SECRET-SCAN-TIMEOUT", {
+          backend: "trufflehog",
+          durationMs: duration,
+          timeoutMs: options.timeoutMs,
+          partialBytes: stdout.length,
+        });
+        return { redacted: false, findings: [], text, timedOut: true };
+      }
 
       const findings = parseTrufflehogNdjson(stdout);
       if (findings.length === 0) {

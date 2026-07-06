@@ -127,6 +127,23 @@ export const secretScanLog = {
     );
   },
 
+  scanTimedOut(
+    durationMs: number,
+    timeoutMs: number,
+    backend: string,
+    partialBytes: number
+  ): void {
+    // Distinct from `scanClean` so the user can tell "actually
+    // clean" from "scanner was killed before it could finish" —
+    // the latter means secrets may have leaked through.
+    getChannel().appendLine(
+      `[${ts()}] ⏱ timed out — ${backend} scan aborted after ` +
+        `${durationMs.toFixed(1)}ms (timeout=${timeoutMs}ms, ` +
+        `${partialBytes} bytes received). ` +
+        `Body may contain unredacted secrets.`
+    );
+  },
+
   scanRedacted(findings: SecretFinding[], durationMs: number): void {
     const ch = getChannel();
     ch.appendLine(
@@ -153,16 +170,25 @@ export const secretScanLog = {
 
   scanUnavailable(
     reason: "missing" | "timeout" | "spawn-error",
-    detail?: string
+    detail?: string,
+    binaryPath?: string
   ): void {
     const ch = getChannel();
     const backend = currentBackendName();
-    const reasonText =
-      reason === "missing"
-        ? `${backend} binary not found on $PATH and opencodego.${backend}Path is unset`
-        : reason === "timeout"
-          ? `${backend} scan timed out`
-          : `${backend} process failed to start`;
+    const tried = binaryPath ? ` (tried: ${binaryPath})` : "";
+    let reasonText: string;
+    if (reason === "missing") {
+      reasonText =
+        `${backend} binary not found on $PATH${tried}. ` +
+        `On Windows + VS Code Remote (WSL), the extension runs inside ` +
+        `the WSL distro's non-interactive shell — install ${backend} ` +
+        `inside the WSL distro, or set ` +
+        `opencodego.${backend}Path to an absolute path.`;
+    } else if (reason === "timeout") {
+      reasonText = `${backend} scan timed out${tried}`;
+    } else {
+      reasonText = `${backend} process failed to start${tried}`;
+    }
     ch.appendLine(`[${ts()}] ✗ scan unavailable — ${reasonText}`);
     if (detail) ch.appendLine(`    ${detail}`);
   },

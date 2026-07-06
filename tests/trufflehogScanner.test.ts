@@ -65,6 +65,13 @@ interface QueuedResponse {
   stdout?: string;
   stderr?: string;
   exitCode?: number;
+  /**
+   * When true, the fake child will not auto-close on its `stdin`
+   * `finish` event — it stays open until the test calls
+   * `spawned[i].flushClose()`. Used by the timeout regression
+   * test so the runner's kill-by-timer can fire.
+   */
+  holdOpen?: boolean;
 }
 
 let queue: QueuedResponse[] = [];
@@ -91,6 +98,14 @@ jest.mock("child_process", () => {
       const next = popResponse(args);
       const send = (): void => {
         if (child.responded) return;
+        if (next.holdOpen) {
+          // Test wants the child to stay open past the runner's
+          // timer. Push whatever data the test staged and stop —
+          // do not emit `close` and do not push the EOF sentinel.
+          if (next.stdout) child.stdout.push(next.stdout);
+          if (next.stderr) child.stderr.push(next.stderr);
+          return;
+        }
         child.responded = true;
         if (next.stdout) child.stdout.push(next.stdout);
         (child.stdout as Readable).push(null);
@@ -135,6 +150,14 @@ function enqueueStdinScan(stdout: string, exitCode = 0): void {
     matchArgs: (args) => args[0] === "stdin",
     stdout,
     exitCode,
+  });
+}
+
+function enqueueHeldStdinScan(partialStdout: string): void {
+  queue.push({
+    matchArgs: (args) => args[0] === "stdin",
+    stdout: partialStdout,
+    holdOpen: true,
   });
 }
 
@@ -205,6 +228,43 @@ describe("scanAndRedact (trufflehog backend)", () => {
     expect(result.redacted).toBe(true);
     expect(result.findings).toHaveLength(2);
     expect(result.text).toBe('aws="[REDACTED:AWS]"; gh="[REDACTED:Github]";');
+  });
+
+  it("returns timedOut=true and the original body when the scan exceeds its timeout", async () => {
+    // Regression test: a 2 s scan on a 80 KB body used to silently
+    // return `{ redacted: false, findings: [], text: <body> }` after
+    // the runner's kill-by-timer fired, which the façade then
+    // reported as "clean — no findings" — the worst possible
+    // outcome, because the body was sent to the LLM unredacted. The
+    // contract now is: when the kill fires, the scanner returns
+    // `timedOut: true` with the original text and the façade emits
+    // a distinct log line so the user can tell the cases apart.
+    enqueueHeldStdinScan("");
+    const body =
+      'aws="AKIAIOSFODNN7EXAMPLE"; gh="ghp_M7p9Lq3RtV34X7K2H8Q5N1B6J0Z9D4Y7S2P8";';
+    const result = await scanAndRedact(body, {
+      timeoutMs: 30,
+      availabilityOverride: AVAILABLE,
+    });
+    // The result MUST signal the timeout so the façade can emit a
+    // distinct log line, and MUST NOT mark the body as redacted.
+    expect(result.timedOut).toBe(true);
+    expect(result.redacted).toBe(false);
+    expect(result.findings).toEqual([]);
+    // The original body is returned unchanged — applying a
+    // partial redaction would be worse than no redaction at all
+    // (the unread tail of the body could still contain secrets).
+    expect(result.text).toBe(body);
+    // The debug log MUST mention the timeout so the post-mortem
+    // trail in ~/oc-go-debug.log distinguishes this from a clean
+    // run.
+    expect(mockedDebugLog).toHaveBeenCalledWith(
+      "SECRET-SCAN-TIMEOUT",
+      expect.objectContaining({
+        backend: "trufflehog",
+        timeoutMs: 30,
+      })
+    );
   });
 
   it("ignores non-finding lines (log lines, banner) in the NDJSON output", async () => {

@@ -48,6 +48,14 @@ export interface ScanResult {
   findings: SecretFinding[];
   /** The text with secrets replaced by their `redacted` form. */
   text: string;
+  /**
+   * True if the scanner was killed by its timeout before it could
+   * finish. When this is set, `text` is the original input
+   * unmodified and `findings` may be incomplete. Callers should
+   * surface this distinctly from a clean run — a timeout means
+   * secrets could have leaked.
+   */
+  timedOut?: boolean;
 }
 
 /** Status of the scanner binary in the current environment. */

@@ -66,7 +66,7 @@ const BASE_URL = "https://opencode.ai/zen/go/v1";
 const MAX_TOOL_RESULT_CHARS = 20000;
 const MAX_TOOLS_PER_REQUEST = 128;
 const DEFAULT_MAX_TOKENS = 65536;
-const SECRET_SCAN_TIMEOUT_MS = 2_000;
+const SECRET_SCAN_TIMEOUT_MS = 5_000;
 
 /**
  * Read the configured secret-scanner backend, action, and binary

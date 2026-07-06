@@ -46,8 +46,22 @@ export { DEFAULT_SCANNER_ID, SCANNER_IDS };
 /** Scanner action as configured by the user. */
 export type ScannerAction = "off" | "redact";
 
-/** Default timeout for an individual scan. */
-const DEFAULT_TIMEOUT_MS = 2_000;
+/**
+ * Default timeout for an individual scan.
+ *
+ * History: this used to be 2_000 ms. TruffleHog on a ~80 KB body
+ * (e.g. a chat request with a large prompt prefix) routinely
+ * exceeds 2 s on a cold WSL VM — the first run after the extension
+ * activates is dominated by binary startup, detector-regex JIT, and
+ * page-in time. The previous default caused a 2 s scan to silently
+ * return an empty result, which the façade then reported as
+ * "clean — no findings", sending the unredacted body to the LLM.
+ * Bumped to 5 s so the realistic case finishes in-budget while a
+ * truly-hung binary still cannot block the chat round-trip
+ * indefinitely. The runner reports a distinct "timed out" log
+ * line rather than a misleading "clean".
+ */
+const DEFAULT_TIMEOUT_MS = 5_000;
 
 /**
  * Resolve which scanner backend should be used for the current
@@ -131,14 +145,49 @@ export async function scanAndRedact(
     options.availabilityOverride ?? (await scanner.checkAvailability());
   if (avail !== "available") {
     // avail can only be "missing" here — "disabled" is handled above
-    // via the action === "off" branch.
-    secretScanLog.scanUnavailable("missing");
+    // via the action === "off" branch. Include the resolved path so
+    // users on Windows + WSL Remote can see exactly which binary the
+    // extension tried to spawn (and so confirm whether the override
+    // setting took effect).
+    secretScanLog.scanUnavailable(
+      "missing",
+      undefined,
+      scanner.resolveBinary()
+    );
     return empty;
   }
 
   const t0 = Date.now();
   const result = await scanner.scan(text, opts);
   const durationMs = Date.now() - t0;
+  if (result.timedOut) {
+    // The scanner was killed by its timeout. Any partial output
+    // is suspect, so we return the original body unchanged. The
+    // log line explicitly tells the user that secrets may have
+    // leaked so they can re-send with a larger request, narrow
+    // the prompt, or increase the timeout (future setting).
+    secretScanLog.scanTimedOut(
+      durationMs,
+      opts.timeoutMs,
+      scanner.id,
+      // We don't have the partial-bytes count at this layer, so
+      // report 0 — the per-scanner debug log already has the
+      // accurate value.
+      0
+    );
+    // Surface the timedOut flag to the caller as well so it can
+    // decide whether to fail-closed in a future iteration (e.g.
+    // an "opencodego.secretScanFailMode = block" setting). For
+    // now, the body is returned unmodified — the LLM will see
+    // the unredacted body, but the log channel makes this
+    // visible to the user.
+    return {
+      redacted: false,
+      findings: [],
+      text: result.text,
+      timedOut: true,
+    };
+  }
   if (result.findings.length === 0) {
     // Note: the per-scanner debugLog call already fired for clean
     // runs; emit the output-channel summary here so the user sees a

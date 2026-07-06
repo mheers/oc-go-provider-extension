@@ -92,11 +92,32 @@ export const gitleaksScanner: Scanner = {
     const binary = resolveGitleaksPath();
     const t0 = Date.now();
     try {
-      const stdout = await spawnScanner(binary, gitleaksBuildArgs(), {
-        timeoutMs: options.timeoutMs,
-        stdinInput: text,
-      });
+      const { stdout, timedOut } = await spawnScanner(
+        binary,
+        gitleaksBuildArgs(),
+        {
+          timeoutMs: options.timeoutMs,
+          stdinInput: text,
+        }
+      );
       const duration = Date.now() - t0;
+
+      if (timedOut) {
+        // The scanner was killed by its timeout. Any output it had
+        // already produced is partial — secrets could be in the
+        // remaining bytes that never made it to stdout. We must NOT
+        // return a partial redaction: that would be worse than
+        // either no scan (caller decides policy) or a full scan
+        // (caller re-runs with a longer budget). Signal the timeout
+        // up to the façade so it can emit a distinct log line.
+        debugLog("SECRET-SCAN-TIMEOUT", {
+          backend: "gitleaks",
+          durationMs: duration,
+          timeoutMs: options.timeoutMs,
+          partialBytes: stdout.length,
+        });
+        return { redacted: false, findings: [], text, timedOut: true };
+      }
 
       const findings = parseGitleaksJson(stdout);
       if (findings.length === 0) {
