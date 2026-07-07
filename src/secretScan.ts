@@ -119,6 +119,7 @@ export async function scanAndRedact(
     timeoutMs?: number;
     availabilityOverride?: ScannerAvailability;
     action?: ScannerAction;
+    configPath?: string;
   } = {}
 ): Promise<ScanResult> {
   const empty: ScanResult = { redacted: false, findings: [], text };
@@ -133,6 +134,7 @@ export async function scanAndRedact(
   const opts: ScanOptions = {
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     availabilityOverride: options.availabilityOverride,
+    configPath: options.configPath,
   };
 
   // Surface scanner-unavailability in the output channel. Without

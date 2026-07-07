@@ -79,6 +79,27 @@ describe("secretScanLog", () => {
     expect(fake.lines[1]).toMatch(/timeout=2000ms/);
   });
 
+  it("emits the effective config in the scanStarted line when provided", () => {
+    secretScanLog.scanStarted({
+      apiFormat: "openai",
+      bytes: 64,
+      timeoutMs: 2000,
+      backend: "trufflehog",
+      config: "bundled default (/work/config/trufflehog.yml)",
+    });
+    expect(fake.lines[1]).toMatch(
+      /config=bundled default \(\/work\/config\/trufflehog\.yml\)/
+    );
+  });
+
+  it("logs when an invalid trufflehog config falls back to bundled default", () => {
+    secretScanLog.configFallback("./relative.yml", "/work/config/trufflehog.yml");
+    expect(fake.lines[0]).toMatch(/invalid trufflehog config/);
+    expect(fake.lines[0]).toMatch(/\.\/relative\.yml/);
+    expect(fake.lines[0]).toMatch(/falling back to bundled default/);
+    expect(fake.lines[0]).toMatch(/\/work\/config\/trufflehog\.yml/);
+  });
+
   it("emits a clean-result line with the duration", () => {
     secretScanLog.scanClean(42.3);
     expect(fake.lines[0]).toMatch(/✓ clean — no findings \(42\.3ms\)/);

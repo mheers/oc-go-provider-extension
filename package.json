@@ -126,6 +126,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Absolute path to the `trufflehog` binary. Leave empty to resolve `trufflehog` from `$PATH`."
+        },
+        "opencodego.trufflehogConfigPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to a custom `trufflehog` YAML config file. Leave empty to use the bundled default config shipped with the extension. Only used when `opencodego.secretScanner` is `trufflehog`."
         }
       }
     }
