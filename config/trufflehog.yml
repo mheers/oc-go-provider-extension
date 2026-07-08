@@ -1,0 +1,19 @@
+detectors:
+  - name: dotenv-sensitive-assignment
+    keywords:
+      - SECRET
+      - secret
+      - TOKEN
+      - token
+      - PASSWORD
+      - password
+      - API_KEY
+      - api_key
+      - CLIENT_SECRET
+      - client_secret
+      - PRIVATE_KEY
+      - private_key
+    regex:
+      secret: >-
+        (?i)\b[A-Z0-9_]*(?:SECRET|TOKEN|PASSWORD|API_KEY|CLIENT_SECRET|PRIVATE_KEY)[A-Z0-9_]*\s*=\s*["']?([A-Za-z0-9_./+=:@-]{6,})["']?
+    entropy: 2.5

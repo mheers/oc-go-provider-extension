@@ -110,14 +110,24 @@ export const secretScanLog = {
     bytes: number;
     timeoutMs: number;
     backend?: string;
+    config?: string;
   }): void {
     const ch = getChannel();
     ch.appendLine("──────────────────────────────");
     const backendPart = input.backend ? `, backend=${input.backend}` : "";
+    const configPart = input.config ? `, config=${input.config}` : "";
     ch.appendLine(
       `[${ts()}] ▶ scan started: api=${input.apiFormat}` +
         backendPart +
+        configPart +
         `, body=${fmtBytes(input.bytes)}, timeout=${input.timeoutMs}ms`
+    );
+  },
+
+  configFallback(configPath: string, bundledPath: string): void {
+    getChannel().appendLine(
+      `[${ts()}] ! invalid trufflehog config: ${configPath}; ` +
+        `falling back to bundled default (${bundledPath})`
     );
   },
 

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import packageJson from "../package.json";
-import { OcGoChatModelProvider } from "./provider";
+import { OcGoChatModelProvider, getSecretScanConfig } from "./provider";
 import { registerOcGoTools } from "./tools";
 import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
@@ -233,6 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
         const action = vscode.workspace
           .getConfiguration("opencodego")
           .get<string>("secretScan", "redact");
+        const resolvedConfig = getSecretScanConfig();
         const path = getConfigPath();
         const avail = await availability(action === "off" ? "off" : "redact");
         const last = statusBarGetLastScan();
@@ -240,6 +241,9 @@ export function activate(context: vscode.ExtensionContext) {
         lines.push(`Action: ${action}`);
         lines.push(`Scanner: ${getConfigName()}`);
         lines.push(`Binary: ${path}`);
+        if (resolvedConfig.scanner === "trufflehog") {
+          lines.push(`Config: ${resolvedConfig.trufflehogConfigLabel}`);
+        }
         lines.push(`Status: ${avail}`);
         if (avail === "missing") {
           lines.push(

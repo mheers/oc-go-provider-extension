@@ -76,6 +76,8 @@ export interface ScanOptions {
   timeoutMs: number;
   /** Override for the availability probe (testing hook). */
   availabilityOverride?: ScannerAvailability;
+  /** Optional scanner-specific config file path. */
+  configPath?: string;
 }
 
 /**

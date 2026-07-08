@@ -90,8 +90,8 @@ export function trufflehogResetAvailabilityCache(): void {
  *   - `--filter-entropy=3.0`        ignore very low-entropy unverified hits
  *   - `--results=unverified,unknown`   emit non-verified hits (see header)
  */
-export function trufflehogBuildArgs(): string[] {
-  return [
+export function trufflehogBuildArgs(configPath?: string): string[] {
+  const args = [
     "stdin",
     "--no-verification",
     "--no-update",
@@ -101,6 +101,8 @@ export function trufflehogBuildArgs(): string[] {
     "--filter-entropy=3.0",
     "--results=unverified,unknown",
   ];
+  if (configPath) args.push(`--config=${configPath}`);
+  return args;
 }
 
 export const trufflehogScanner: Scanner = {
@@ -131,7 +133,7 @@ export const trufflehogScanner: Scanner = {
     try {
       const { stdout, timedOut } = await spawnScanner(
         binary,
-        trufflehogBuildArgs(),
+        trufflehogBuildArgs(options.configPath),
         {
           timeoutMs: options.timeoutMs,
           stdinInput: text,

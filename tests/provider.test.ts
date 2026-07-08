@@ -1,9 +1,14 @@
 /// <reference types="jest" />
 
 import * as vscode from "vscode";
+import * as path from "path";
 
-import { OcGoChatModelProvider } from "../src/provider";
+import {
+  OcGoChatModelProvider,
+  getSecretScanConfig,
+} from "../src/provider";
 import { secrets } from "../__mocks__/vscode";
+import { secretScanLog } from "../src/secretScanLog";
 
 function createDoneStream(): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -178,5 +183,74 @@ describe("OcGoChatModelProvider", () => {
       createToken()
     );
     expect(count).toBe(Math.ceil(text.length / 2));
+  });
+});
+
+describe("getSecretScanConfig", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete process.env["OPENCODEGO_SCANNER"];
+    delete process.env["OPENCODEGO_GITLEAKS_PATH"];
+    delete process.env["OPENCODEGO_TRUFFLEHOG_PATH"];
+  });
+
+  it("uses the bundled trufflehog config when no override is set", () => {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string, defaultValue: unknown) => {
+        if (key === "secretScanner") return "trufflehog";
+        if (key === "secretScan") return "redact";
+        if (key === "trufflehogConfigPath") return "";
+        return defaultValue;
+      }),
+    });
+
+    const config = getSecretScanConfig();
+
+    expect(config.scanner).toBe("trufflehog");
+    expect(config.trufflehogConfigPath).toBe(
+      path.resolve(process.cwd(), "config", "trufflehog.yml")
+    );
+    expect(config.trufflehogConfigLabel).toBe(
+      `bundled default (${path.resolve(process.cwd(), "config", "trufflehog.yml")})`
+    );
+  });
+
+  it("uses an absolute trufflehog config override as-is", () => {
+    const customPath = path.resolve(process.cwd(), "config", "trufflehog.yml");
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string, defaultValue: unknown) => {
+        if (key === "secretScanner") return "trufflehog";
+        if (key === "secretScan") return "redact";
+        if (key === "trufflehogConfigPath") return customPath;
+        return defaultValue;
+      }),
+    });
+
+    const config = getSecretScanConfig();
+
+    expect(config.trufflehogConfigPath).toBe(customPath);
+    expect(config.trufflehogConfigLabel).toBe(customPath);
+  });
+
+  it("falls back to the bundled config for a relative trufflehog override", () => {
+    const fallbackSpy = jest.spyOn(secretScanLog, "configFallback");
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string, defaultValue: unknown) => {
+        if (key === "secretScanner") return "trufflehog";
+        if (key === "secretScan") return "redact";
+        if (key === "trufflehogConfigPath") return "./relative.yml";
+        return defaultValue;
+      }),
+    });
+
+    const config = getSecretScanConfig();
+
+    expect(config.trufflehogConfigPath).toBe(
+      path.resolve(process.cwd(), "config", "trufflehog.yml")
+    );
+    expect(fallbackSpy).toHaveBeenCalledWith(
+      "./relative.yml",
+      path.resolve(process.cwd(), "config", "trufflehog.yml")
+    );
   });
 });

@@ -41,6 +41,7 @@ Integrates [OpenCode Go](https://opencode.ai/docs/ja/go) models into VS Code Cop
   - Backend selected by `opencodego.secretScanner` (`trufflehog` | `gitleaks`, default `trufflehog`)
   - Action gated by `opencodego.secretScan` (`off` | `redact`, default `redact`)
   - Configurable binary paths via `opencodego.trufflehogPath` and `opencodego.gitleaksPath`
+  - TruffleHog uses the bundled `config/trufflehog.yml` by default; `opencodego.trufflehogConfigPath` can override it with an absolute path
   - TruffleHog runs with `--no-verification` and `--no-update` so it never makes network calls during a scan
   - Status surfaced via the command `OpenCode Go: Show Secret Scan Status`
 

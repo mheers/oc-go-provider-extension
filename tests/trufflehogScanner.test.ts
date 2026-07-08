@@ -357,6 +357,17 @@ describe("scanAndRedact (trufflehog backend)", () => {
     ]);
   });
 
+  it("passes the resolved trufflehog config via --config", async () => {
+    enqueueStdinScan("");
+    await scanAndRedact("hello world", {
+      timeoutMs: 1000,
+      availabilityOverride: AVAILABLE,
+      configPath: "/tmp/trufflehog-custom.yml",
+    });
+    const call = spawned.find((c) => c.args[0] === "stdin");
+    expect(call?.args).toContain("--config=/tmp/trufflehog-custom.yml");
+  });
+
   it("passes the request body to trufflehog via stdin (no positional path)", async () => {
     enqueueStdinScan("");
     await scanAndRedact("hello world", {

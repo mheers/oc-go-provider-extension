@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { accessSync, constants } from "fs";
+import { isAbsolute, resolve } from "path";
 import {
   CancellationToken,
   LanguageModelChatInformation,
@@ -82,10 +84,16 @@ const SECRET_SCAN_TIMEOUT_MS = 5_000;
  *     absolute paths to the binaries, leave empty to resolve from
  *     `$PATH`.
  */
-function getSecretScanConfig(): {
+function getBundledTrufflehogConfigPath(): string {
+  return resolve(__dirname, "..", "config", "trufflehog.yml");
+}
+
+export function getSecretScanConfig(): {
   action: ScannerAction;
   scanner: ScannerId;
   path: string;
+  trufflehogConfigPath?: string;
+  trufflehogConfigLabel?: string;
 } {
   const cfg = vscode.workspace.getConfiguration("opencodego");
   const rawAction = cfg.get<string>("secretScan", "redact");
@@ -110,7 +118,42 @@ function getSecretScanConfig(): {
   } else {
     delete process.env[envKey];
   }
-  return { action, scanner, path };
+  if (scanner !== "trufflehog") {
+    return { action, scanner, path };
+  }
+
+  const bundledPath = getBundledTrufflehogConfigPath();
+  const configuredConfigPath = cfg.get<string>("trufflehogConfigPath", "").trim();
+  if (!configuredConfigPath) {
+    return {
+      action,
+      scanner,
+      path,
+      trufflehogConfigPath: bundledPath,
+      trufflehogConfigLabel: `bundled default (${bundledPath})`,
+    };
+  }
+
+  try {
+    if (!isAbsolute(configuredConfigPath)) throw new Error("not-absolute");
+    accessSync(configuredConfigPath, constants.R_OK);
+    return {
+      action,
+      scanner,
+      path,
+      trufflehogConfigPath: configuredConfigPath,
+      trufflehogConfigLabel: configuredConfigPath,
+    };
+  } catch {
+    secretScanLog.configFallback(configuredConfigPath, bundledPath);
+    return {
+      action,
+      scanner,
+      path,
+      trufflehogConfigPath: bundledPath,
+      trufflehogConfigLabel: `bundled default (${bundledPath})`,
+    };
+  }
 }
 
 /**
@@ -142,7 +185,8 @@ async function redactRequestBody(
   body: Json,
   apiFormat: OcGoApiFormat
 ): Promise<RedactedRequestBody> {
-  const { action, scanner } = getSecretScanConfig();
+  const { action, scanner, trufflehogConfigPath, trufflehogConfigLabel } =
+    getSecretScanConfig();
   if (action === "off") {
     secretScanLog.scanDisabled();
     return { body, redacted: false };
@@ -157,6 +201,7 @@ async function redactRequestBody(
     bytes: serialized.length,
     timeoutMs: SECRET_SCAN_TIMEOUT_MS,
     backend: getConfigName(),
+    config: trufflehogConfigLabel,
   });
 
   const result = await vscode.window.withProgress<
@@ -171,6 +216,7 @@ async function redactRequestBody(
       scanAndRedact(serialized, {
         timeoutMs: SECRET_SCAN_TIMEOUT_MS,
         action,
+        configPath: trufflehogConfigPath,
       })
   );
 
