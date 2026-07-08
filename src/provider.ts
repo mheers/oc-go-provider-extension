@@ -123,7 +123,9 @@ export function getSecretScanConfig(): {
   }
 
   const bundledPath = getBundledTrufflehogConfigPath();
-  const configuredConfigPath = cfg.get<string>("trufflehogConfigPath", "").trim();
+  const configuredConfigPath = cfg
+    .get<string>("trufflehogConfigPath", "")
+    .trim();
   if (!configuredConfigPath) {
     return {
       action,

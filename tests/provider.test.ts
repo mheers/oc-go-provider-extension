@@ -3,10 +3,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 
-import {
-  OcGoChatModelProvider,
-  getSecretScanConfig,
-} from "../src/provider";
+import { OcGoChatModelProvider, getSecretScanConfig } from "../src/provider";
 import { secrets } from "../__mocks__/vscode";
 import { secretScanLog } from "../src/secretScanLog";
 

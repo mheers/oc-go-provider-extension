@@ -93,7 +93,10 @@ describe("secretScanLog", () => {
   });
 
   it("logs when an invalid trufflehog config falls back to bundled default", () => {
-    secretScanLog.configFallback("./relative.yml", "/work/config/trufflehog.yml");
+    secretScanLog.configFallback(
+      "./relative.yml",
+      "/work/config/trufflehog.yml"
+    );
     expect(fake.lines[0]).toMatch(/invalid trufflehog config/);
     expect(fake.lines[0]).toMatch(/\.\/relative\.yml/);
     expect(fake.lines[0]).toMatch(/falling back to bundled default/);
