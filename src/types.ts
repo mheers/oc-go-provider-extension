@@ -511,6 +511,28 @@ export const OC_GO_MODELS: OcGoModelInfo[] = [
     apiFormat: "openai",
     thinkingMode: "none",
   },
+  {
+    id: "grok-4.5",
+    name: "Grok 4.5",
+    displayName: "Grok 4.5",
+    contextWindow: 131072,
+    maxOutput: 65536,
+    supportsTools: true,
+    supportsVision: true,
+    apiFormat: "openai",
+    thinkingMode: "switchable",
+  },
+  {
+    id: "kimi-k3",
+    name: "Kimi K3",
+    displayName: "Kimi K3",
+    contextWindow: 131072,
+    maxOutput: 65536,
+    supportsTools: true,
+    supportsVision: true,
+    apiFormat: "openai",
+    thinkingMode: "switchable",
+  },
 ];
 
 /** Default model used for OCR/vision proxy when non-vision models receive images */
