@@ -47,8 +47,19 @@ function inferApiFormat(id: string): "openai" | "anthropic" {
 function inferVision(id: string): boolean {
   if (id.startsWith("claude-")) return true;
   if (id.startsWith("gemini-")) return true;
-  if (id.startsWith("gpt-5.6-") || id.startsWith("gpt-5.5") || id.startsWith("gpt-5.4")) return !id.includes("nano") && !id.includes("mini");
-  if (id.startsWith("gpt-5.3-") || id.startsWith("gpt-5.2-") || id.startsWith("gpt-5.1-") || id.startsWith("gpt-5-")) return false;
+  if (
+    id.startsWith("gpt-5.6-") ||
+    id.startsWith("gpt-5.5") ||
+    id.startsWith("gpt-5.4")
+  )
+    return !id.includes("nano") && !id.includes("mini");
+  if (
+    id.startsWith("gpt-5.3-") ||
+    id.startsWith("gpt-5.2-") ||
+    id.startsWith("gpt-5.1-") ||
+    id.startsWith("gpt-5-")
+  )
+    return false;
   if (id === "gpt-5.2" || id === "gpt-5.1" || id === "gpt-5") return true;
   if (id.startsWith("grok-build-")) return true;
   return false;
@@ -60,7 +71,11 @@ function inferThinking(id: string): "switchable" | "none" {
     if (id.includes("lite")) return "none";
     return "switchable";
   }
-  if (id.includes("nano") || id.includes("mini") && !id.includes("codex-mini")) return "none";
+  if (
+    id.includes("nano") ||
+    (id.includes("mini") && !id.includes("codex-mini"))
+  )
+    return "none";
   if (id.includes("codex")) {
     if (id.includes("mini") || id === "gpt-5-codex") return "none";
   }
@@ -72,7 +87,7 @@ async function fetchModelIds(apiUrl: string): Promise<string[]> {
   try {
     const res = await fetch(apiUrl, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return [];
-    const body = await res.json() as { data?: Array<{ id: string }> };
+    const body = (await res.json()) as { data?: Array<{ id: string }> };
     return (body.data || []).map((m) => m.id);
   } catch {
     return [];

@@ -120,79 +120,79 @@ Once configured, select OpenCode Go as your chat provider in VS Code Copilot Cha
 
 Token limits below are the values currently used by this extension and may change if OpenCode Go updates model limits. **Thinking** indicates reasoning mode: _always_ (enabled automatically), _switchable_ (toggleable per request), or _none_. **API** indicates whether the model is reached via the OpenAI-compatible (`/chat/completions`) or Anthropic-compatible (`/messages`) endpoint.
 
-| Model | Context Window | Max Output | Vision | Tools | Thinking | API |
-| ----- | -------------- | ---------- | ------ | ----- | -------- | --- |
-| **OpenCode Go** | | | | | | |
-| GLM-5 | 202,752 | 131,072 | No | Yes | none | OpenAI |
-| GLM-5.1 | 202,752 | 131,072 | No | Yes | none | OpenAI |
-| GLM-5.2 | 202,752 | 131,072 | No | Yes | none | OpenAI |
-| Kimi K2.5 | 262,144 | 65,536 | Yes | Yes | always | OpenAI |
-| Kimi K2.6 | 262,144 | 262,144 | Yes | Yes | always | OpenAI |
-| Kimi K2.7 Code | 262,144 | 262,144 | Yes | Yes | always | OpenAI |
-| Kimi K3 | 131,072 | 65,536 | Yes | Yes | switchable | OpenAI |
-| MiMo-V2-Pro | 1,048,576 | 131,072 | No | Yes | switchable | OpenAI |
-| MiMo-V2.5-Pro | 1,048,576 | 131,072 | No | Yes | switchable | OpenAI |
-| MiMo-V2-Omni | 262,144 | 65,536 | Yes | Yes | switchable | OpenAI |
-| MiMo-V2.5 | 262,144 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Qwen3.5 Plus | 1,000,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Qwen3.6 Plus | 1,000,000 | 65,536 | Yes | Yes | switchable | Anthropic |
-| Qwen3.7 Plus | 1,000,000 | 65,536 | Yes | Yes | switchable | Anthropic |
-| Qwen3.7 Max | 262,144 | 65,536 | Yes | Yes | switchable | Anthropic |
-| DeepSeek V4 Flash | 1,000,000 | 393,216 | No | Yes | switchable | OpenAI |
-| DeepSeek V4 Pro | 1,000,000 | 393,216 | No | Yes | switchable | OpenAI |
-| MiniMax M2.5 | 196,608 | 131,072 | No | Yes | none | Anthropic |
-| MiniMax M2.7 | 196,608 | 131,072 | No | Yes | none | Anthropic |
-| MiniMax M3 | 262,144 | 131,072 | No | Yes | switchable | Anthropic |
-| Hy3 Preview | 262,144 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Grok 4.5 | 131,072 | 65,536 | Yes | Yes | switchable | OpenAI |
-| **Free Zen** | | | | | | |
-| Big Pickle | 131,072 | 65,536 | No | Yes | none | OpenAI |
-| DeepSeek V4 Flash Free | 1,000,000 | 393,216 | No | Yes | none | OpenAI |
-| MiMo-V2.5 Free | 262,144 | 65,536 | Yes | Yes | none | OpenAI |
-| Laguna S 2.1 Free | 131,072 | 65,536 | No | Yes | none | OpenAI |
-| North Mini Code Free | 131,072 | 65,536 | No | Yes | none | OpenAI |
-| Nemotron 3 Ultra Free | 131,072 | 65,536 | No | Yes | none | OpenAI |
-| **Anthropic Claude** | | | | | | |
-| Claude Fable 5 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Opus 4.8 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Opus 4.7 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Opus 4.6 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Opus 4.5 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Opus 4.1 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Sonnet 5 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Sonnet 4.6 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Sonnet 4.5 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Sonnet 4 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| Claude Haiku 4.5 | 200,000 | 8,192 | Yes | Yes | switchable | Anthropic |
-| **Google Gemini** | | | | | | |
-| Gemini 3.6 Flash | 1,000,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Gemini 3.5 Flash | 1,000,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Gemini 3.5 Flash Lite | 1,000,000 | 65,536 | Yes | Yes | none | OpenAI |
-| Gemini 3.1 Pro | 2,000,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| Gemini 3 Flash | 1,000,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| **OpenAI GPT** | | | | | | |
-| GPT 5.6 Sol | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.6 Terra | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.6 Luna | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.5 | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.5 Pro | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.4 | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.4 Pro | 272,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.4 Mini | 272,000 | 65,536 | No | Yes | none | OpenAI |
-| GPT 5.4 Nano | 272,000 | 65,536 | No | Yes | none | OpenAI |
-| GPT 5.3 Codex Spark | 128,000 | 65,536 | No | Yes | switchable | OpenAI |
-| GPT 5.3 Codex | 128,000 | 65,536 | No | Yes | switchable | OpenAI |
-| GPT 5.2 | 128,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.2 Codex | 128,000 | 65,536 | No | Yes | switchable | OpenAI |
-| GPT 5.1 | 128,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5.1 Codex | 128,000 | 65,536 | No | Yes | none | OpenAI |
-| GPT 5.1 Codex Max | 200,000 | 65,536 | No | Yes | switchable | OpenAI |
-| GPT 5.1 Codex Mini | 128,000 | 65,536 | No | Yes | none | OpenAI |
-| GPT 5 | 128,000 | 65,536 | Yes | Yes | switchable | OpenAI |
-| GPT 5 Codex | 128,000 | 65,536 | No | Yes | none | OpenAI |
-| GPT 5 Nano | 128,000 | 65,536 | No | Yes | none | OpenAI |
-| **xAI Grok** | | | | | | |
-| Grok Build 0.1 | 131,072 | 65,536 | Yes | Yes | switchable | OpenAI |
+| Model                  | Context Window | Max Output | Vision | Tools | Thinking   | API       |
+| ---------------------- | -------------- | ---------- | ------ | ----- | ---------- | --------- |
+| **OpenCode Go**        |                |            |        |       |            |           |
+| GLM-5                  | 202,752        | 131,072    | No     | Yes   | none       | OpenAI    |
+| GLM-5.1                | 202,752        | 131,072    | No     | Yes   | none       | OpenAI    |
+| GLM-5.2                | 202,752        | 131,072    | No     | Yes   | none       | OpenAI    |
+| Kimi K2.5              | 262,144        | 65,536     | Yes    | Yes   | always     | OpenAI    |
+| Kimi K2.6              | 262,144        | 262,144    | Yes    | Yes   | always     | OpenAI    |
+| Kimi K2.7 Code         | 262,144        | 262,144    | Yes    | Yes   | always     | OpenAI    |
+| Kimi K3                | 131,072        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| MiMo-V2-Pro            | 1,048,576      | 131,072    | No     | Yes   | switchable | OpenAI    |
+| MiMo-V2.5-Pro          | 1,048,576      | 131,072    | No     | Yes   | switchable | OpenAI    |
+| MiMo-V2-Omni           | 262,144        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| MiMo-V2.5              | 262,144        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Qwen3.5 Plus           | 1,000,000      | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Qwen3.6 Plus           | 1,000,000      | 65,536     | Yes    | Yes   | switchable | Anthropic |
+| Qwen3.7 Plus           | 1,000,000      | 65,536     | Yes    | Yes   | switchable | Anthropic |
+| Qwen3.7 Max            | 262,144        | 65,536     | Yes    | Yes   | switchable | Anthropic |
+| DeepSeek V4 Flash      | 1,000,000      | 393,216    | No     | Yes   | switchable | OpenAI    |
+| DeepSeek V4 Pro        | 1,000,000      | 393,216    | No     | Yes   | switchable | OpenAI    |
+| MiniMax M2.5           | 196,608        | 131,072    | No     | Yes   | none       | Anthropic |
+| MiniMax M2.7           | 196,608        | 131,072    | No     | Yes   | none       | Anthropic |
+| MiniMax M3             | 262,144        | 131,072    | No     | Yes   | switchable | Anthropic |
+| Hy3 Preview            | 262,144        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Grok 4.5               | 131,072        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| **Free Zen**           |                |            |        |       |            |           |
+| Big Pickle             | 131,072        | 65,536     | No     | Yes   | none       | OpenAI    |
+| DeepSeek V4 Flash Free | 1,000,000      | 393,216    | No     | Yes   | none       | OpenAI    |
+| MiMo-V2.5 Free         | 262,144        | 65,536     | Yes    | Yes   | none       | OpenAI    |
+| Laguna S 2.1 Free      | 131,072        | 65,536     | No     | Yes   | none       | OpenAI    |
+| North Mini Code Free   | 131,072        | 65,536     | No     | Yes   | none       | OpenAI    |
+| Nemotron 3 Ultra Free  | 131,072        | 65,536     | No     | Yes   | none       | OpenAI    |
+| **Anthropic Claude**   |                |            |        |       |            |           |
+| Claude Fable 5         | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Opus 4.8        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Opus 4.7        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Opus 4.6        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Opus 4.5        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Opus 4.1        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Sonnet 5        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Sonnet 4.6      | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Sonnet 4.5      | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Sonnet 4        | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| Claude Haiku 4.5       | 200,000        | 8,192      | Yes    | Yes   | switchable | Anthropic |
+| **Google Gemini**      |                |            |        |       |            |           |
+| Gemini 3.6 Flash       | 1,000,000      | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Gemini 3.5 Flash       | 1,000,000      | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Gemini 3.5 Flash Lite  | 1,000,000      | 65,536     | Yes    | Yes   | none       | OpenAI    |
+| Gemini 3.1 Pro         | 2,000,000      | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| Gemini 3 Flash         | 1,000,000      | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| **OpenAI GPT**         |                |            |        |       |            |           |
+| GPT 5.6 Sol            | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.6 Terra          | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.6 Luna           | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.5                | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.5 Pro            | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.4                | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.4 Pro            | 272,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.4 Mini           | 272,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| GPT 5.4 Nano           | 272,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| GPT 5.3 Codex Spark    | 128,000        | 65,536     | No     | Yes   | switchable | OpenAI    |
+| GPT 5.3 Codex          | 128,000        | 65,536     | No     | Yes   | switchable | OpenAI    |
+| GPT 5.2                | 128,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.2 Codex          | 128,000        | 65,536     | No     | Yes   | switchable | OpenAI    |
+| GPT 5.1                | 128,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5.1 Codex          | 128,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| GPT 5.1 Codex Max      | 200,000        | 65,536     | No     | Yes   | switchable | OpenAI    |
+| GPT 5.1 Codex Mini     | 128,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| GPT 5                  | 128,000        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
+| GPT 5 Codex            | 128,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| GPT 5 Nano             | 128,000        | 65,536     | No     | Yes   | none       | OpenAI    |
+| **xAI Grok**           |                |            |        |       |            |           |
+| Grok Build 0.1         | 131,072        | 65,536     | Yes    | Yes   | switchable | OpenAI    |
 
 ## MCP Integration
 

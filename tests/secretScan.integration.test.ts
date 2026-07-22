@@ -142,6 +142,6 @@ function trufflehogAvailable(): boolean {
         expect(result.text).toContain(`[REDACTED:${f.ruleId}]`);
         expect(result.text).not.toContain(f.secret);
       }
-    });
+    }, 15_000);
   }
 );

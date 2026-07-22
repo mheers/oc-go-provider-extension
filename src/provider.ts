@@ -404,7 +404,9 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     } catch {
       // Discovery failure is non-fatal — fall back to static list
     }
-    console.log(`[OpenCode Go Provider] Found ${models.length} models (${models.length - OC_GO_MODELS.length} discovered)`);
+    console.log(
+      `[OpenCode Go Provider] Found ${models.length} models (${models.length - OC_GO_MODELS.length} discovered)`
+    );
 
     const infos: LanguageModelChatInformation[] = [];
     for (const model of models) {
@@ -476,7 +478,9 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     return modelInfo?.supportsVision ?? false;
   }
 
-  private async resolveModelInfo(modelId: string): Promise<OcGoModelInfo | undefined> {
+  private async resolveModelInfo(
+    modelId: string
+  ): Promise<OcGoModelInfo | undefined> {
     let info = OC_GO_MODELS.find((m) => m.id === modelId);
     if (info) return info;
     try {
@@ -507,7 +511,9 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
   /**
    * Get model info by id
    */
-  private async getModelInfo(modelId: string): Promise<OcGoModelInfo | undefined> {
+  private async getModelInfo(
+    modelId: string
+  ): Promise<OcGoModelInfo | undefined> {
     return this.resolveModelInfo(modelId);
   }
 
