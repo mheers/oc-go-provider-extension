@@ -6,7 +6,12 @@ import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
 import { OC_GO_MODELS, DEFAULT_VISION_PROXY_MODEL } from "./types";
 import { clearDiscoverCache } from "./discover";
-import { availability, getConfigPath, getConfigName } from "./secretScan";
+import {
+  availability,
+  getConfigPath,
+  getConfigName,
+  _resetAvailabilityCache,
+} from "./secretScan";
 import { secretScanLog, disposeChannel } from "./secretScanLog";
 
 // Global provider reference for API key management
@@ -214,13 +219,22 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // Listen for vision proxy configuration changes
+  // Listen for configuration changes to apply settings in real time
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("opencodego.visionProxyModel")) {
         vscode.window.showInformationMessage(
           "Vision proxy model updated. Changes apply to new requests."
         );
+      }
+      if (
+        e.affectsConfiguration("opencodego.secretScan") ||
+        e.affectsConfiguration("opencodego.secretScanner") ||
+        e.affectsConfiguration("opencodego.gitleaksPath") ||
+        e.affectsConfiguration("opencodego.trufflehogPath") ||
+        e.affectsConfiguration("opencodego.trufflehogConfigPath")
+      ) {
+        _resetAvailabilityCache();
       }
     })
   );
