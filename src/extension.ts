@@ -5,6 +5,7 @@ import { registerOcGoTools } from "./tools";
 import { initStatusBar, statusBarGetLastScan } from "./statusBar";
 import { flushLog } from "./logging";
 import { OC_GO_MODELS, DEFAULT_VISION_PROXY_MODEL } from "./types";
+import { clearDiscoverCache } from "./discover";
 import { availability, getConfigPath, getConfigName } from "./secretScan";
 import { secretScanLog, disposeChannel } from "./secretScanLog";
 
@@ -25,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     context.secrets.onDidChange((e) => {
       if (e.key === "opencode-go.apiKey") {
+        clearDiscoverCache();
         _provider?.fireModelInfoChanged();
       }
     })

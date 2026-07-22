@@ -489,12 +489,126 @@ describe("OC_GO_MODELS", () => {
     expect(model?.thinkingMode).toBe("switchable");
   });
 
+  it("should have DeepSeek V4 Flash Free model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "deepseek-v4-flash-free");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("DeepSeek V4 Flash Free");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsTools).toBe(true);
+    expect(model?.supportsVision).toBe(false);
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have MiMo-V2.5 Free model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "mimo-v2.5-free");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("MiMo-V2.5 Free");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Laguna S 2.1 Free model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "laguna-s-2.1-free");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Laguna S 2.1 Free");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have North Mini Code Free model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "north-mini-code-free");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("North Mini Code Free");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Nemotron 3 Ultra Free model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "nemotron-3-ultra-free");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Nemotron 3 Ultra Free");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Claude Fable 5 model with Anthropic API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "claude-fable-5");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Claude Fable 5");
+    expect(model?.apiFormat).toBe("anthropic");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.thinkingMode).toBe("switchable");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Claude Sonnet 5 model with Anthropic API format", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "claude-sonnet-5");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Claude Sonnet 5");
+    expect(model?.apiFormat).toBe("anthropic");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Gemini 3.6 Flash model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "gemini-3.6-flash");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Gemini 3.6 Flash");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.contextWindow).toBe(1000000);
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have GPT 5.6 Sol model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "gpt-5.6-sol");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("GPT 5.6 Sol");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsVision).toBe(true);
+    expect(model?.contextWindow).toBe(272000);
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have GPT 5.4 Nano model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "gpt-5.4-nano");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("GPT 5.4 Nano");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.supportsVision).toBe(false);
+    expect(model?.thinkingMode).toBe("none");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Grok Build 0.1 model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "grok-build-0.1");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Grok Build 0.1");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
+  it("should have Big Pickle model", () => {
+    const model = OC_GO_MODELS.find((m) => m.id === "big-pickle");
+    expect(model).toBeDefined();
+    expect(model?.name).toBe("Big Pickle");
+    expect(model?.apiFormat).toBe("openai");
+    expect(model?.baseUrl).toBe("https://opencode.ai/zen/v1");
+  });
+
   it("should have correct API formats for each model", () => {
     const anthropicModels = OC_GO_MODELS.filter(
       (m) =>
         m.id.startsWith("minimax-") ||
         m.id.startsWith("qwen3.7-") ||
-        m.id.startsWith("qwen3.6-")
+        m.id.startsWith("qwen3.6-") ||
+        m.id.startsWith("claude-")
     );
     anthropicModels.forEach((model) => {
       expect(model.apiFormat).toBe("anthropic");
@@ -503,7 +617,8 @@ describe("OC_GO_MODELS", () => {
       (m) =>
         !m.id.startsWith("minimax-") &&
         !m.id.startsWith("qwen3.7-") &&
-        !m.id.startsWith("qwen3.6-")
+        !m.id.startsWith("qwen3.6-") &&
+        !m.id.startsWith("claude-")
     );
     openaiModels.forEach((model) => {
       expect(model.apiFormat).toBe("openai");

@@ -16,6 +16,7 @@
  */
 
 const GO_MODELS_API = "https://opencode.ai/zen/go/v1/models";
+const ZEN_MODELS_API = "https://opencode.ai/zen/v1/models";
 const TYPES_FILE = new URL("../src/types.ts", import.meta.url);
 // Monorepo-style, but should work from project root
 
@@ -258,6 +259,577 @@ const SPECS = [
       thinkingMode: "switchable",
     },
   },
+
+  // —— Free Zen models (use /zen/v1 endpoint) ——
+  {
+    prefix: "deepseek-v4-flash-free",
+    spec: {
+      name: "DeepSeek V4 Flash Free",
+      displayName: "DeepSeek V4 Flash Free",
+      contextWindow: 1000000,
+      maxOutput: 393216,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "mimo-v2.5-free",
+    spec: {
+      name: "MiMo-V2.5 Free",
+      displayName: "MiMo-V2.5 Free",
+      contextWindow: 262144,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "laguna-s-2.1-free",
+    spec: {
+      name: "Laguna S 2.1 Free",
+      displayName: "Laguna S 2.1 Free",
+      contextWindow: 131072,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "north-mini-code-free",
+    spec: {
+      name: "North Mini Code Free",
+      displayName: "North Mini Code Free",
+      contextWindow: 131072,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "nemotron-3-ultra-free",
+    spec: {
+      name: "Nemotron 3 Ultra Free",
+      displayName: "Nemotron 3 Ultra Free",
+      contextWindow: 131072,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+
+  // —— Anthropic Claude models (Anthropic API format) ——
+  {
+    prefix: "claude-fable-5",
+    spec: {
+      name: "Claude Fable 5",
+      displayName: "Claude Fable 5",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-opus-4-8",
+    spec: {
+      name: "Claude Opus 4.8",
+      displayName: "Claude Opus 4.8",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-opus-4-7",
+    spec: {
+      name: "Claude Opus 4.7",
+      displayName: "Claude Opus 4.7",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-opus-4-6",
+    spec: {
+      name: "Claude Opus 4.6",
+      displayName: "Claude Opus 4.6",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-opus-4-5",
+    spec: {
+      name: "Claude Opus 4.5",
+      displayName: "Claude Opus 4.5",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-opus-4-1",
+    spec: {
+      name: "Claude Opus 4.1",
+      displayName: "Claude Opus 4.1",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-sonnet-5",
+    spec: {
+      name: "Claude Sonnet 5",
+      displayName: "Claude Sonnet 5",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-sonnet-4-6",
+    spec: {
+      name: "Claude Sonnet 4.6",
+      displayName: "Claude Sonnet 4.6",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-sonnet-4-5",
+    spec: {
+      name: "Claude Sonnet 4.5",
+      displayName: "Claude Sonnet 4.5",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-sonnet-4",
+    spec: {
+      name: "Claude Sonnet 4",
+      displayName: "Claude Sonnet 4",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "claude-haiku-4-5",
+    spec: {
+      name: "Claude Haiku 4.5",
+      displayName: "Claude Haiku 4.5",
+      contextWindow: 200000,
+      maxOutput: 8192,
+      supportsVision: true,
+      apiFormat: "anthropic",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+
+  // —— Google Gemini models (OpenAI-compatible) ——
+  {
+    prefix: "gemini-3.6-flash",
+    spec: {
+      name: "Gemini 3.6 Flash",
+      displayName: "Gemini 3.6 Flash",
+      contextWindow: 1000000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gemini-3.5-flash-lite",
+    spec: {
+      name: "Gemini 3.5 Flash Lite",
+      displayName: "Gemini 3.5 Flash Lite",
+      contextWindow: 1000000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gemini-3.5-flash",
+    spec: {
+      name: "Gemini 3.5 Flash",
+      displayName: "Gemini 3.5 Flash",
+      contextWindow: 1000000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gemini-3.1-pro",
+    spec: {
+      name: "Gemini 3.1 Pro",
+      displayName: "Gemini 3.1 Pro",
+      contextWindow: 2000000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gemini-3-flash",
+    spec: {
+      name: "Gemini 3 Flash",
+      displayName: "Gemini 3 Flash",
+      contextWindow: 1000000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+
+  // —— OpenAI GPT models (OpenAI-compatible) ——
+  {
+    prefix: "gpt-5.6-sol",
+    spec: {
+      name: "GPT 5.6 Sol",
+      displayName: "GPT 5.6 Sol",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.6-terra",
+    spec: {
+      name: "GPT 5.6 Terra",
+      displayName: "GPT 5.6 Terra",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.6-luna",
+    spec: {
+      name: "GPT 5.6 Luna",
+      displayName: "GPT 5.6 Luna",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.5-pro",
+    spec: {
+      name: "GPT 5.5 Pro",
+      displayName: "GPT 5.5 Pro",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.5",
+    spec: {
+      name: "GPT 5.5",
+      displayName: "GPT 5.5",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.4-pro",
+    spec: {
+      name: "GPT 5.4 Pro",
+      displayName: "GPT 5.4 Pro",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.4-mini",
+    spec: {
+      name: "GPT 5.4 Mini",
+      displayName: "GPT 5.4 Mini",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.4-nano",
+    spec: {
+      name: "GPT 5.4 Nano",
+      displayName: "GPT 5.4 Nano",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.4",
+    spec: {
+      name: "GPT 5.4",
+      displayName: "GPT 5.4",
+      contextWindow: 272000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.3-codex-spark",
+    spec: {
+      name: "GPT 5.3 Codex Spark",
+      displayName: "GPT 5.3 Codex Spark",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.3-codex",
+    spec: {
+      name: "GPT 5.3 Codex",
+      displayName: "GPT 5.3 Codex",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.2-codex",
+    spec: {
+      name: "GPT 5.2 Codex",
+      displayName: "GPT 5.2 Codex",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.2",
+    spec: {
+      name: "GPT 5.2",
+      displayName: "GPT 5.2",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.1-codex-max",
+    spec: {
+      name: "GPT 5.1 Codex Max",
+      displayName: "GPT 5.1 Codex Max",
+      contextWindow: 200000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.1-codex-mini",
+    spec: {
+      name: "GPT 5.1 Codex Mini",
+      displayName: "GPT 5.1 Codex Mini",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.1-codex",
+    spec: {
+      name: "GPT 5.1 Codex",
+      displayName: "GPT 5.1 Codex",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5.1",
+    spec: {
+      name: "GPT 5.1",
+      displayName: "GPT 5.1",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5-codex",
+    spec: {
+      name: "GPT 5 Codex",
+      displayName: "GPT 5 Codex",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5-nano",
+    spec: {
+      name: "GPT 5 Nano",
+      displayName: "GPT 5 Nano",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+  {
+    prefix: "gpt-5",
+    spec: {
+      name: "GPT 5",
+      displayName: "GPT 5",
+      contextWindow: 128000,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+
+  // —— xAI Grok models ——
+  {
+    prefix: "grok-build-0.1",
+    spec: {
+      name: "Grok Build 0.1",
+      displayName: "Grok Build 0.1",
+      contextWindow: 131072,
+      maxOutput: 65536,
+      supportsVision: true,
+      apiFormat: "openai",
+      thinkingMode: "switchable",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
+
+  // —— Free / other ——
+  {
+    prefix: "big-pickle",
+    spec: {
+      name: "Big Pickle",
+      displayName: "Big Pickle",
+      contextWindow: 131072,
+      maxOutput: 65536,
+      supportsVision: false,
+      apiFormat: "openai",
+      thinkingMode: "none",
+      baseUrl: "https://opencode.ai/zen/v1",
+    },
+  },
 ];
 
 /* Fallback for completely unknown models */
@@ -301,6 +873,9 @@ function toModelEntry(id, spec) {
   if (spec.fixedTemperature !== undefined) {
     kv.push(`    fixedTemperature: ${spec.fixedTemperature},`);
   }
+  if (spec.baseUrl !== undefined) {
+    kv.push(`    baseUrl: "${spec.baseUrl}",`);
+  }
   kv.push(`    thinkingMode: "${spec.thinkingMode}",`);
   return kv.join("\n");
 }
@@ -320,15 +895,18 @@ async function main() {
   const args = process.argv.slice(2);
   const isApply = args.includes("--apply");
   const isHelp = args.includes("--help");
+  const isZen = args.includes("--zen");
 
   if (isHelp) {
     console.log(`
-Usage: node scripts/sync-models.mjs [--apply]
+Usage: node scripts/sync-models.mjs [--apply] [--zen]
 
-Fetches the OpenCode Go model list and compares it against OC_GO_MODELS
+Fetches the OpenCode model list and compares it against OC_GO_MODELS
 in src/types.ts.
 
   --apply    Write new model entries directly into types.ts
+  --zen      Use the full Zen API (https://opencode.ai/zen/v1/models)
+             instead of the Go API (https://opencode.ai/zen/go/v1/models)
   --help     Show this help
 
 Without --apply the script runs in dry-run mode (read-only).
@@ -337,8 +915,9 @@ Without --apply the script runs in dry-run mode (read-only).
   }
 
   // 1. Fetch the API
-  console.log("🔍 Fetching models from", GO_MODELS_API, "...");
-  const res = await fetch(GO_MODELS_API);
+  const apiUrl = isZen ? ZEN_MODELS_API : GO_MODELS_API;
+  console.log("🔍 Fetching models from", apiUrl, "...");
+  const res = await fetch(apiUrl);
   if (!res.ok) {
     console.error(`❌ API returned ${res.status} ${res.statusText}`);
     process.exit(1);

@@ -14,7 +14,7 @@ CODE    ?= code
 
 .PHONY: help all install compile watch test test-watch test-coverage \
         lint lint-fix format format-check clean package package-no-deps publish \
-        reinstall sync-models sync-models-apply
+        reinstall sync-models sync-models-apply sync-zen-models sync-zen-models-apply
 
 .DEFAULT_GOAL := help
 
@@ -87,3 +87,9 @@ sync-models: ## Fetch model list from OpenCode Go API and show differences (dry-
 
 sync-models-apply: ## Fetch model list and insert new models into src/types.ts
 	$(NODE) scripts/sync-models.mjs --apply
+
+sync-zen-models: ## Fetch model list from full OpenCode Zen API and show differences (dry-run)
+	$(NODE) scripts/sync-models.mjs --zen
+
+sync-zen-models-apply: ## Fetch model list from full OpenCode Zen API and insert new models into src/types.ts
+	$(NODE) scripts/sync-models.mjs --zen --apply

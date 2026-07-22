@@ -25,6 +25,7 @@ import type {
   OcGoApiFormat,
 } from "./types";
 import { OC_GO_MODELS } from "./types";
+import { discoverModels, getAllModels } from "./discover";
 import {
   convertMessages,
   convertTools,
@@ -394,8 +395,16 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       return [];
     }
 
-    const models = OC_GO_MODELS;
-    console.log(`[OpenCode Go Provider] Found ${models.length} models`);
+    let models = OC_GO_MODELS;
+    try {
+      const discovered = await discoverModels();
+      if (discovered.length > 0) {
+        models = getAllModels(discovered);
+      }
+    } catch {
+      // Discovery failure is non-fatal — fall back to static list
+    }
+    console.log(`[OpenCode Go Provider] Found ${models.length} models (${models.length - OC_GO_MODELS.length} discovered)`);
 
     const infos: LanguageModelChatInformation[] = [];
     for (const model of models) {
@@ -462,9 +471,21 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
   /**
    * Check if model supports vision natively
    */
-  private modelSupportsVision(modelId: string): boolean {
-    const modelInfo = OC_GO_MODELS.find((m) => m.id === modelId);
+  private async modelSupportsVision(modelId: string): Promise<boolean> {
+    const modelInfo = await this.resolveModelInfo(modelId);
     return modelInfo?.supportsVision ?? false;
+  }
+
+  private async resolveModelInfo(modelId: string): Promise<OcGoModelInfo | undefined> {
+    let info = OC_GO_MODELS.find((m) => m.id === modelId);
+    if (info) return info;
+    try {
+      const discovered = await discoverModels();
+      info = discovered.find((m) => m.id === modelId);
+    } catch {
+      // ignore
+    }
+    return info;
   }
 
   /**
@@ -486,8 +507,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
   /**
    * Get model info by id
    */
-  private getModelInfo(modelId: string): OcGoModelInfo | undefined {
-    return OC_GO_MODELS.find((m) => m.id === modelId);
+  private async getModelInfo(modelId: string): Promise<OcGoModelInfo | undefined> {
+    return this.resolveModelInfo(modelId);
   }
 
   /**
@@ -707,7 +728,7 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       const hasImages = this.hasImageInput(messages);
       let processedMessages = messages;
 
-      if (hasImages && !this.modelSupportsVision(effectiveModelId)) {
+      if (hasImages && !(await this.modelSupportsVision(effectiveModelId))) {
         debugLog("OCR-ROUTE", {
           model: effectiveModelId,
           reason: "non-vision",
@@ -727,7 +748,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       }
 
       // Status bar updates
-      const effectiveModelInfo = this.getModelInfo(effectiveModelId);
+      const effectiveModelInfo = await this.getModelInfo(effectiveModelId);
+      const modelBaseUrl = effectiveModelInfo?.baseUrl ?? BASE_URL;
       const tokenLimit = Math.max(
         1,
         effectiveModelInfo
@@ -833,7 +855,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
           trackingProgress,
           token,
           abortController,
-          thinkingLevel
+          thinkingLevel,
+          modelBaseUrl
         );
       } else {
         await this.handleOpenAIRequest(
@@ -847,7 +870,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
           trackingProgress,
           token,
           abortController,
-          thinkingLevel
+          thinkingLevel,
+          modelBaseUrl
         );
       }
     } catch (err) {
@@ -885,7 +909,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     trackingProgress: Progress<LanguageModelResponsePart>,
     token: CancellationToken,
     abortController: AbortController,
-    thinkingLevel?: string
+    thinkingLevel?: string,
+    modelBaseUrl?: string
   ): Promise<void> {
     const toolConfig = convertTools(options);
     const apiMessages = convertMessages(processedMessages, {
@@ -948,7 +973,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
       ? injectRedactionHintForOpenAI(scannedRaw as JsonObject, scannedRedacted)
       : (scannedRaw as JsonObject)) as unknown as OcGoRequestBody;
 
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
+    const baseUrl = modelBaseUrl ?? BASE_URL;
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -992,7 +1018,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
     trackingProgress: Progress<LanguageModelResponsePart>,
     token: CancellationToken,
     abortController: AbortController,
-    thinkingLevel?: string
+    thinkingLevel?: string,
+    modelBaseUrl?: string
   ): Promise<void> {
     const toolConfig = convertToolsToAnthropic(options);
     const { messages: apiMessages, system } = convertMessagesToAnthropic(
@@ -1065,7 +1092,8 @@ export class OcGoChatModelProvider implements LanguageModelChatProvider {
         )
       : (scannedRaw as JsonObject)) as unknown as AnthropicRequestBody;
 
-    const response = await fetch(`${BASE_URL}/messages`, {
+    const baseUrl = modelBaseUrl ?? BASE_URL;
+    const response = await fetch(`${baseUrl}/messages`, {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
